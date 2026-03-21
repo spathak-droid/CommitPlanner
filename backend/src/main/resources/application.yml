@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/weekly_commits
-    username: app
-    password: app_local_dev
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/weekly_commits}
+    username: ${DATABASE_USERNAME:app}
+    password: ${DATABASE_PASSWORD:app_local_dev}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

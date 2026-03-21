@@ -11,7 +11,7 @@ import type {
   UserRole,
 } from '../types';
 
-let BASE_URL = 'http://localhost:8080/api';
+let BASE_URL = (window as any).__API_URL__ || 'http://localhost:8080/api';
 let AUTH_TOKEN = '';
 
 export class ApiError extends Error {
