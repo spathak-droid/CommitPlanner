@@ -561,7 +561,15 @@ public class AiService {
                     throw new RuntimeException("AI API returned " + response.code());
                 }
                 JsonNode root = objectMapper.readTree(responseBody);
-                return root.path("choices").path(0).path("message").path("content").asText("{}");
+                String content = root.path("choices").path(0).path("message").path("content").asText("{}");
+                // Strip markdown code fences that Claude sometimes wraps around JSON
+                content = content.strip();
+                if (content.startsWith("```")) {
+                    int firstNewline = content.indexOf('\n');
+                    if (firstNewline != -1) content = content.substring(firstNewline + 1);
+                    if (content.endsWith("```")) content = content.substring(0, content.length() - 3).strip();
+                }
+                return content;
             }
         } catch (IOException e) {
             log.error("AI API call failed: {}", e.getMessage(), e);
