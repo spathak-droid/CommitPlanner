@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { StatusBadge } from '../components/StatusBadge';
 import { usePageTransition, useStaggerReveal, useMagneticButton } from '../hooks/useAnimations';
 import * as api from '../services/api';
+import type { ReviewInsight, WeeklyDigest } from '../types';
 
 function getMonday(): string {
   const now = new Date();
@@ -19,6 +20,10 @@ const ManagerDashboardPage: React.FC = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewInsight, setReviewInsight] = useState<ReviewInsight | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [weeklyDigest, setWeeklyDigest] = useState<WeeklyDigest | null>(null);
+  const [digestLoading, setDigestLoading] = useState(false);
 
   useEffect(() => { fetchTeamData(weekStart); }, [weekStart, fetchTeamData]);
 
@@ -36,6 +41,24 @@ const ManagerDashboardPage: React.FC = () => {
       setFeedback(''); fetchTeamData(weekStart);
     } catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
     finally { setSubmittingReview(false); }
+  };
+
+  const handleLoadInsight = async (planId: string) => {
+    setInsightLoading(true);
+    try {
+      const insight = await api.getReviewInsight(planId);
+      setReviewInsight(insight);
+    } catch { setReviewInsight(null); }
+    finally { setInsightLoading(false); }
+  };
+
+  const handleLoadDigest = async () => {
+    setDigestLoading(true);
+    try {
+      const digest = await api.getWeeklyDigest(weekStart);
+      setWeeklyDigest(digest);
+    } catch { setWeeklyDigest(null); }
+    finally { setDigestLoading(false); }
   };
 
   const totalCommits = teamPlans.reduce((s, p) => s + p.totalCommits, 0);
@@ -189,6 +212,74 @@ const ManagerDashboardPage: React.FC = () => {
             })}
           </div>
 
+        </div>
+
+        {/* AI Review Insight */}
+        <div className="rounded-[1.25rem] bg-gradient-to-br from-tertiary-container/20 via-white to-primary-container/10 p-6 ring-1 ring-tertiary/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg text-tertiary">auto_awesome</span>
+              <h3 className="font-black text-on-surface">AI Review Insights</h3>
+            </div>
+            {!reviewInsight && !insightLoading && (
+              <button onClick={() => handleLoadInsight(selectedPlan.id)}
+                className="px-4 py-2 rounded-full bg-tertiary-container text-on-tertiary-container text-xs font-bold hover:bg-tertiary hover:text-on-tertiary transition-all">
+                Generate Insights
+              </button>
+            )}
+          </div>
+
+          {insightLoading && (
+            <div className="flex items-center gap-2 text-sm text-secondary">
+              <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+              Analyzing plan...
+            </div>
+          )}
+
+          {reviewInsight && (
+            <div className="space-y-4">
+              <div className="rounded-[0.75rem] bg-white/80 p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-2">Overall</p>
+                <p className="text-sm text-on-surface">{reviewInsight.overallAssessment}</p>
+              </div>
+
+              {reviewInsight.patterns.length > 0 && (
+                <div className="rounded-[0.75rem] bg-white/80 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-2">Patterns</p>
+                  <ul className="space-y-1">
+                    {reviewInsight.patterns.map((p, i) => (
+                      <li key={i} className="text-sm text-on-surface flex items-start gap-2">
+                        <span className="material-symbols-outlined text-sm text-primary mt-0.5">insights</span>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {reviewInsight.riskSignals.length > 0 && (
+                <div className="rounded-[0.75rem] bg-error-container/20 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-error mb-2">Risk Signals</p>
+                  <ul className="space-y-1">
+                    {reviewInsight.riskSignals.map((r, i) => (
+                      <li key={i} className="text-sm text-on-surface flex items-start gap-2">
+                        <span className="material-symbols-outlined text-sm text-error mt-0.5">warning</span>
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {reviewInsight.suggestedFeedback && selectedPlan.status === 'RECONCILED' && !selectedPlan.reviewStatus && (
+                <button onClick={() => setFeedback(reviewInsight.suggestedFeedback)}
+                  className="text-left w-full rounded-[0.75rem] bg-primary-container/30 p-4 hover:bg-primary-container/50 transition-colors">
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Suggested Feedback (click to use)</p>
+                  <p className="text-sm text-on-surface">{reviewInsight.suggestedFeedback}</p>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Review Section — always visible with appropriate content per status */}
@@ -492,6 +583,77 @@ const ManagerDashboardPage: React.FC = () => {
                     <p className="text-sm font-medium text-on-surface leading-relaxed">{insight.text}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* AI Weekly Digest */}
+              <div className="mb-6">
+                {!weeklyDigest && !digestLoading && (
+                  <button onClick={handleLoadDigest}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tertiary-container/40 text-on-tertiary-container text-xs font-bold hover:bg-tertiary-container transition-colors">
+                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                    Generate AI Digest
+                  </button>
+                )}
+
+                {digestLoading && (
+                  <div className="flex items-center gap-2 text-sm text-secondary">
+                    <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    Generating digest...
+                  </div>
+                )}
+
+                {weeklyDigest && (
+                  <div className="rounded-[1rem] bg-white/60 p-5 ring-1 ring-tertiary/10 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-tertiary">auto_awesome</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-tertiary">AI Digest</span>
+                      </div>
+                      <button onClick={() => setWeeklyDigest(null)}
+                        className="p-1 rounded-full hover:bg-surface-container text-secondary">
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-on-surface leading-relaxed">{weeklyDigest.executiveSummary}</p>
+
+                    {weeklyDigest.highlights.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Highlights</p>
+                        {weeklyDigest.highlights.map((h, i) => (
+                          <p key={i} className="text-sm text-on-surface flex items-start gap-2">
+                            <span className="material-symbols-outlined text-sm text-primary mt-0.5">thumb_up</span>
+                            {h}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {weeklyDigest.concerns.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-error mb-1">Concerns</p>
+                        {weeklyDigest.concerns.map((c, i) => (
+                          <p key={i} className="text-sm text-on-surface flex items-start gap-2">
+                            <span className="material-symbols-outlined text-sm text-error mt-0.5">warning</span>
+                            {c}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {weeklyDigest.suggestedTalkingPoints.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-tertiary mb-1">Talking Points</p>
+                        {weeklyDigest.suggestedTalkingPoints.map((tp, i) => (
+                          <p key={i} className="text-sm text-on-surface flex items-start gap-2">
+                            <span className="material-symbols-outlined text-sm text-tertiary mt-0.5">chat</span>
+                            {tp}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-3">

@@ -23,6 +23,35 @@ const WeeklyPlanPage: React.FC = () => {
   } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<import('../types').CommitSuggestionResponse | null>(null);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const handleAiSuggest = async () => {
+    if (!aiInput.trim()) return;
+    setAiLoading(true);
+    try {
+      const suggestion = await api.suggestCommit(aiInput);
+      setAiSuggestion(suggestion);
+    } catch { showToast('AI suggestion failed', 'error'); }
+    finally { setAiLoading(false); }
+  };
+
+  const handleAcceptAiSuggestion = async () => {
+    if (!aiSuggestion || !currentPlan) return;
+    try {
+      setPlan(await api.addCommit(currentPlan.id, {
+        title: aiSuggestion.suggestedTitle,
+        description: aiSuggestion.suggestedDescription,
+        chessPriority: (aiSuggestion.suggestedPriority as import('../types').ChessPriority) || 'SHOULD_DO',
+        outcomeId: aiSuggestion.suggestedOutcomeId,
+        plannedHours: aiSuggestion.estimatedHours,
+      }));
+      setAiSuggestion(null);
+      setAiInput('');
+      showToast('AI-suggested commitment added', 'success');
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Failed to add', 'error'); }
+  };
 
   const pageRef = usePageTransition([currentPlan, loadingPlan]);
   const commitsRef = useStaggerReveal([currentPlan?.commits.length]);
@@ -391,11 +420,71 @@ const WeeklyPlanPage: React.FC = () => {
         })}
       </div>
 
-      {currentPlan.commits.length === 0 && !showForm && (
+      {currentPlan.commits.length === 0 && !showForm && isDraft && (
+        <div className="bg-surface-lowest rounded-[1rem] p-8 shadow-sm ring-1 ring-outline-variant/10 space-y-6">
+          <div className="text-center">
+            <span className="material-symbols-outlined text-5xl text-outline-variant mb-4">playlist_add</span>
+            <p className="text-secondary font-medium">No commitments yet</p>
+            <p className="text-sm text-secondary/70 mt-1">Click "Add Commitment" to get started, or describe your plans below for AI suggestions</p>
+          </div>
+
+          {/* AI Plan Assist */}
+          <div className="rounded-[1rem] bg-gradient-to-br from-tertiary-container/20 via-white to-primary-container/10 p-5 ring-1 ring-tertiary/10">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-base text-tertiary">auto_awesome</span>
+              <span className="text-xs font-black uppercase tracking-widest text-tertiary">Plan This Week with AI</span>
+            </div>
+
+            <div className="flex gap-2">
+              <input type="text" value={aiInput} onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAiSuggest()}
+                placeholder="Describe what you're working on this week..."
+                className="flex-1 bg-white border border-outline-variant/15 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary/30" />
+              <button onClick={handleAiSuggest} disabled={!aiInput.trim() || aiLoading}
+                className="px-5 py-3 bg-tertiary text-on-tertiary rounded-full font-bold text-sm disabled:opacity-40 transition-all flex items-center gap-2">
+                {aiLoading ? (
+                  <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-base">auto_awesome</span>
+                )}
+                Suggest
+              </button>
+            </div>
+
+            {aiSuggestion && (
+              <div className="mt-4 rounded-[0.75rem] bg-white/80 p-4 ring-1 ring-outline-variant/10 space-y-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-secondary">Suggested Commitment</p>
+                  <p className="text-lg font-bold text-on-surface mt-1">{aiSuggestion.suggestedTitle}</p>
+                  <p className="text-sm text-secondary mt-1">{aiSuggestion.suggestedDescription}</p>
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  <span className="px-3 py-1 rounded-full bg-surface-container-low font-semibold">{aiSuggestion.suggestedPriority?.replace('_', ' ')}</span>
+                  <span className="px-3 py-1 rounded-full bg-surface-container-low font-semibold">{aiSuggestion.outcomeName}</span>
+                  <span className="px-3 py-1 rounded-full bg-surface-container-low font-semibold">{aiSuggestion.estimatedHours}h estimated</span>
+                </div>
+                <p className="text-xs text-secondary/70">{aiSuggestion.rationale}</p>
+                <div className="flex gap-2">
+                  <button onClick={handleAcceptAiSuggestion}
+                    className="px-5 py-2.5 bg-primary text-on-primary rounded-full font-bold text-sm hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">add</span>
+                    Add This Commitment
+                  </button>
+                  <button onClick={() => setAiSuggestion(null)}
+                    className="px-5 py-2.5 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {currentPlan.commits.length === 0 && !showForm && !isDraft && (
         <div className="bg-surface-lowest rounded-[1rem] p-16 text-center shadow-sm ring-1 ring-outline-variant/10">
           <span className="material-symbols-outlined text-5xl text-outline-variant mb-4">playlist_add</span>
           <p className="text-secondary font-medium">No commitments yet</p>
-          <p className="text-sm text-secondary/70 mt-1">Click "Add Commitment" to get started</p>
         </div>
       )}
     </div>

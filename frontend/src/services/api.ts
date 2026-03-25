@@ -9,9 +9,18 @@ import type {
   TeamPlanSummary,
   RcdoAlignmentResponse,
   UserRole,
+  OutcomeMatchResult,
+  HoursEstimate,
+  CommitSuggestionResponse,
+  ReconciliationAssist,
+  ReviewInsight,
+  AlignmentSuggestion,
+  WeeklyDigest,
+  AiStatus,
 } from '../types';
 
-let BASE_URL = (window as any).__API_URL__ || 'http://localhost:8080/api';
+const rawApiUrl = (window as any).__API_URL__;
+let BASE_URL = rawApiUrl && !rawApiUrl.includes('%%') ? rawApiUrl : 'http://localhost:8080/api';
 let AUTH_TOKEN = '';
 
 export class ApiError extends Error {
@@ -206,3 +215,36 @@ export const markNotificationRead = (id: string): Promise<void> => request(`/not
 
 export const sendNudge = (userIds: string[], weekLabel: string): Promise<{ message: string }> =>
   request('/notifications/nudge', { method: 'POST', body: JSON.stringify({ userIds, weekLabel }) });
+
+// AI
+export const getAiStatus = (): Promise<AiStatus> => request('/ai/status');
+
+export const matchOutcomes = (title: string, description?: string): Promise<OutcomeMatchResult[]> =>
+  request('/ai/match-outcomes', {
+    method: 'POST',
+    body: JSON.stringify({ title, description }),
+  });
+
+export const estimateHours = (title: string, description?: string, chessPriority?: string): Promise<HoursEstimate> =>
+  request('/ai/estimate-hours', {
+    method: 'POST',
+    body: JSON.stringify({ title, description, chessPriority }),
+  });
+
+export const suggestCommit = (userInput: string): Promise<CommitSuggestionResponse> =>
+  request('/ai/suggest-commit', {
+    method: 'POST',
+    body: JSON.stringify({ userInput }),
+  });
+
+export const getReconciliationAssist = (commitId: string): Promise<ReconciliationAssist> =>
+  request(`/ai/reconciliation-assist/${commitId}`);
+
+export const getReviewInsight = (planId: string): Promise<ReviewInsight> =>
+  request(`/ai/review-insight/${planId}`);
+
+export const getAlignmentSuggestions = (weekStart?: string): Promise<AlignmentSuggestion[]> =>
+  request(`/ai/alignment-suggestions${weekStart ? `?weekStart=${weekStart}` : ''}`);
+
+export const getWeeklyDigest = (weekStart: string): Promise<WeeklyDigest> =>
+  request(`/ai/weekly-digest?weekStart=${weekStart}`);

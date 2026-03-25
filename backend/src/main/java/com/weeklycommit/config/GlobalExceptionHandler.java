@@ -1,5 +1,6 @@
 package com.weeklycommit.config;
 
+import com.weeklycommit.exception.AiUnavailableException;
 import com.weeklycommit.exception.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,5 +37,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleUnauthorized(InvalidCredentialsException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(AiUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleAiUnavailable(AiUnavailableException e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", e.getMessage()));
     }
 }

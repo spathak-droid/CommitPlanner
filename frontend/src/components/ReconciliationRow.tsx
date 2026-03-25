@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import type { CommitResponse, ReconcileCommitRequest } from '../types';
+import type { CommitResponse, ReconcileCommitRequest, ReconciliationAssist } from '../types';
 import { ChessBadge } from './ChessBadge';
+import * as api from '../services/api';
 
 interface Props {
   commit: CommitResponse;
@@ -14,6 +15,29 @@ export const ReconciliationRow: React.FC<Props> = ({ commit, onReconcile, disabl
   const [notes, setNotes] = useState(commit.reconciliationNotes ?? '');
   const [carryForward, setCarryForward] = useState(commit.carryForward);
   const [saving, setSaving] = useState(false);
+  const [aiAssist, setAiAssist] = useState<ReconciliationAssist | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const handleAiAssist = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const assist = await api.getReconciliationAssist(commit.id);
+      setAiAssist(assist);
+    } catch (e) {
+      setAiError(e instanceof api.ApiError && e.status === 503 ? 'AI unavailable' : 'AI assist failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyAiSuggestion = (field: 'completion' | 'notes' | 'carryForward' | 'all') => {
+    if (!aiAssist) return;
+    if (field === 'completion' || field === 'all') setCompletionPct(aiAssist.suggestedCompletionPct.toString());
+    if (field === 'notes' || field === 'all') setNotes(aiAssist.suggestedNotes);
+    if (field === 'carryForward' || field === 'all') setCarryForward(aiAssist.suggestCarryForward);
+  };
 
   const pct = commit.completionPct ?? 0;
   const currentPct = completionPct ? parseInt(completionPct, 10) : pct;
@@ -165,6 +189,71 @@ export const ReconciliationRow: React.FC<Props> = ({ commit, onReconcile, disabl
               disabled={disabled}
             />
           </label>
+
+          {/* AI Assist Panel */}
+          {!disabled && (
+            <div className="mt-4">
+              {!aiAssist && !aiLoading && !aiError && (
+                <button type="button" onClick={handleAiAssist}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tertiary-container/40 text-on-tertiary-container text-xs font-bold hover:bg-tertiary-container transition-colors">
+                  <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                  AI Assist
+                </button>
+              )}
+
+              {aiLoading && (
+                <div className="flex items-center gap-2 text-sm text-secondary">
+                  <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                  Analyzing commitment...
+                </div>
+              )}
+
+              {aiError && (
+                <p className="text-xs text-secondary">{aiError}</p>
+              )}
+
+              {aiAssist && (
+                <div className="rounded-[0.75rem] bg-tertiary-container/20 p-4 ring-1 ring-tertiary/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm text-tertiary">auto_awesome</span>
+                      <span className="text-xs font-black uppercase tracking-widest text-tertiary">AI Suggestions</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => applyAiSuggestion('all')}
+                        className="px-3 py-1 rounded-full bg-tertiary text-on-tertiary text-xs font-bold">
+                        Apply All
+                      </button>
+                      <button type="button" onClick={() => setAiAssist(null)}
+                        className="p-1 rounded-full hover:bg-surface-container text-secondary">
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <button type="button" onClick={() => applyAiSuggestion('completion')}
+                      className="text-left rounded-[0.5rem] bg-white/80 p-3 ring-1 ring-outline-variant/10 hover:ring-tertiary/30 transition-all">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">Completion</p>
+                      <p className="text-lg font-black text-on-surface">{aiAssist.suggestedCompletionPct}%</p>
+                    </button>
+                    <button type="button" onClick={() => applyAiSuggestion('carryForward')}
+                      className="text-left rounded-[0.5rem] bg-white/80 p-3 ring-1 ring-outline-variant/10 hover:ring-tertiary/30 transition-all">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">Carry Forward</p>
+                      <p className="text-sm font-bold text-on-surface">{aiAssist.suggestCarryForward ? 'Yes' : 'No'}</p>
+                    </button>
+                    <button type="button" onClick={() => applyAiSuggestion('notes')}
+                      className="text-left rounded-[0.5rem] bg-white/80 p-3 ring-1 ring-outline-variant/10 hover:ring-tertiary/30 transition-all">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">Notes</p>
+                      <p className="text-xs text-secondary line-clamp-2">{aiAssist.suggestedNotes}</p>
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-secondary/70">{aiAssist.rationale}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <label className="inline-flex items-center gap-3 text-sm font-medium text-on-surface">

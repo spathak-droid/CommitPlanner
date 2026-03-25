@@ -139,3 +139,64 @@ export interface AppProps {
   apiBaseUrl?: string;
   authToken?: string;
 }
+
+// AI Types
+export interface OutcomeMatchResult {
+  outcomeId: string;
+  outcomeName: string;
+  rallyCryName: string;
+  definingObjectiveName: string;
+  confidence: number;
+  rationale: string;
+}
+
+export interface HoursEstimate {
+  estimatedHours: number;
+  lowRange: number;
+  highRange: number;
+  rationale: string;
+}
+
+export interface CommitSuggestionResponse {
+  suggestedTitle: string;
+  suggestedDescription: string;
+  suggestedPriority: string;
+  suggestedOutcomeId: string;
+  outcomeName: string;
+  estimatedHours: number;
+  rationale: string;
+}
+
+export interface ReconciliationAssist {
+  suggestedCompletionPct: number;
+  suggestedNotes: string;
+  suggestCarryForward: boolean;
+  rationale: string;
+}
+
+export interface ReviewInsight {
+  patterns: string[];
+  riskSignals: string[];
+  suggestedFeedback: string;
+  overallAssessment: string;
+}
+
+export interface AlignmentSuggestion {
+  outcomeId: string;
+  outcomeName: string;
+  rallyCryName: string;
+  reason: string;
+  priority: number;
+}
+
+export interface WeeklyDigest {
+  executiveSummary: string;
+  highlights: string[];
+  concerns: string[];
+  suggestedTalkingPoints: string[];
+}
+
+export interface AiStatus {
+  enabled: boolean;
+  model: string | null;
+}

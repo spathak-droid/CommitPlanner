@@ -23,6 +23,10 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     runtimeOnly("org.postgresql:postgresql")
 
+    implementation("com.anthropic:anthropic-java:1.2.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.h2database:h2")
 }

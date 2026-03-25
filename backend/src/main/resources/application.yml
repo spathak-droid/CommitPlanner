@@ -17,3 +17,9 @@ spring:
 
 server:
   port: 8080
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  base-url: ${ANTHROPIC_BASE_URL:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-4-20250514}
+  max-tokens: 1024

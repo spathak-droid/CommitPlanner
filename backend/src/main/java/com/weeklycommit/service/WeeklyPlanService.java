@@ -55,9 +55,10 @@ public class WeeklyPlanService {
         userRepo.findByUserIdAndActiveTrue(userId)
             .orElseThrow(() -> new IllegalArgumentException("Unknown or inactive user: " + userId));
 
-        planRepo.findByUserIdAndWeekStartDate(userId, weekStart).ifPresent(existing -> {
-            throw new IllegalArgumentException("Plan already exists for user " + userId + " week of " + weekStart);
-        });
+        var existing = planRepo.findByUserIdAndWeekStartDate(userId, weekStart);
+        if (existing.isPresent()) {
+            return toResponse(existing.get());
+        }
 
         var plan = new WeeklyPlan();
         plan.setUserId(userId);

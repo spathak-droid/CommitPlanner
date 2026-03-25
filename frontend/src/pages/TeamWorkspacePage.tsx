@@ -233,7 +233,7 @@ const TeamWorkspacePage: React.FC = () => {
                             </p>
                           </div>
 
-                          <div className="grid gap-2 text-right sm:grid-cols-3 sm:text-left lg:text-right">
+                          <div className="grid grid-cols-3 gap-4 text-center shrink-0 min-w-[180px]">
                             <div>
                               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-secondary">Planned</p>
                               <p className="mt-1 text-lg font-black text-on-surface">{commit.plannedHours ?? '—'}h</p>

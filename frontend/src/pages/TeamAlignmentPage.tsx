@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../store/useStore';
+import * as api from '../services/api';
 
 function getMonday(): string {
   const now = new Date();
@@ -12,6 +13,17 @@ function getMonday(): string {
 const TeamAlignmentPage: React.FC = () => {
   const { rcdoAlignment, loadingTeam, fetchTeamData } = useStore();
   const [weekStart, setWeekStart] = useState(getMonday());
+  const [aiSuggestions, setAiSuggestions] = useState<import('../types').AlignmentSuggestion[] | null>(null);
+  const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
+
+  const loadAiSuggestions = async () => {
+    setAiSuggestionsLoading(true);
+    try {
+      const suggestions = await api.getAlignmentSuggestions(weekStart);
+      setAiSuggestions(suggestions);
+    } catch { setAiSuggestions([]); }
+    finally { setAiSuggestionsLoading(false); }
+  };
 
   useEffect(() => { fetchTeamData(weekStart); }, [weekStart, fetchTeamData]);
 
@@ -301,6 +313,49 @@ const TeamAlignmentPage: React.FC = () => {
               <p><span className="font-bold text-on-surface">Dashboard:</span> operational roll-up, weekly plan health, drill-down reviews, and sync readiness.</p>
               <p><span className="font-bold text-on-surface">Team Alignment:</span> week-specific support signals, outcome gaps, and completion-based risk indicators across Rally Cries and objectives.</p>
             </div>
+          </div>
+
+          {/* AI Alignment Suggestions */}
+          <div className="rounded-[2rem] bg-gradient-to-br from-tertiary-container/25 via-white to-primary-container/15 p-6 shadow-[0px_20px_48px_rgba(27,27,30,0.05)] ring-1 ring-tertiary/10">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-tertiary">AI Suggestions</p>
+                <h2 className="font-display mt-2 text-2xl font-black tracking-tight text-on-surface">Focus Areas</h2>
+              </div>
+              {!aiSuggestions && !aiSuggestionsLoading && (
+                <button onClick={loadAiSuggestions}
+                  className="px-4 py-2 rounded-full bg-tertiary-container text-on-tertiary-container text-xs font-bold hover:bg-tertiary hover:text-on-tertiary transition-all">
+                  <span className="material-symbols-outlined text-sm mr-1 align-middle">auto_awesome</span>
+                  Generate
+                </button>
+              )}
+            </div>
+
+            {aiSuggestionsLoading && (
+              <div className="flex items-center gap-2 text-sm text-secondary">
+                <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                Analyzing alignment...
+              </div>
+            )}
+
+            {aiSuggestions && aiSuggestions.length > 0 && (
+              <div className="space-y-3">
+                {aiSuggestions.map((suggestion, i) => (
+                  <div key={suggestion.outcomeId} className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-outline-variant/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 rounded-full bg-tertiary text-on-tertiary text-xs font-black flex items-center justify-center">{i + 1}</span>
+                      <span className="text-xs font-bold text-tertiary">{suggestion.rallyCryName}</span>
+                    </div>
+                    <p className="font-bold text-on-surface text-sm">{suggestion.outcomeName}</p>
+                    <p className="text-xs text-secondary mt-1">{suggestion.reason}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {aiSuggestions && aiSuggestions.length === 0 && (
+              <p className="text-sm text-secondary">All outcomes appear well-covered this week.</p>
+            )}
           </div>
         </div>
       </div>
