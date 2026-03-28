@@ -5,6 +5,8 @@ import com.weeklycommit.dto.LoginRequest;
 import com.weeklycommit.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +23,28 @@ public class AuthController {
 
     @Operation(summary = "Login and receive a bearer token")
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        AuthResponse authResponse = authService.login(request);
+        Cookie cookie = new Cookie("auth_token", authResponse.token());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false); // Set to true in production with HTTPS
+        cookie.setPath("/api");
+        cookie.setMaxAge(12 * 60 * 60); // 12 hours
+        cookie.setAttribute("SameSite", "Strict");
+        response.addCookie(cookie);
+        return authResponse;
+    }
+
+    @Operation(summary = "Logout and clear auth cookie")
+    @PostMapping("/logout")
+    public void logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("auth_token", "");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);
+        cookie.setPath("/api");
+        cookie.setMaxAge(0);
+        cookie.setAttribute("SameSite", "Strict");
+        response.addCookie(cookie);
     }
 
     @Operation(summary = "Get current authenticated user")

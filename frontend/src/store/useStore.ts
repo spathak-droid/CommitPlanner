@@ -97,6 +97,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ ...session, isAuthenticated: true });
   },
   logout: () => {
+    api.logout().catch(() => {}); // Best-effort cookie clear
     api.setAuthToken('');
     writeSession(null);
     set({

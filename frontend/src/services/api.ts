@@ -50,6 +50,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
+      credentials: 'include',
       headers,
       ...options,
     });
@@ -82,6 +83,10 @@ export const login = (userId: string, password: string): Promise<AuthResponse> =
   });
 
 export const fetchCurrentUser = (): Promise<AuthResponse> => request('/auth/me');
+
+export async function logout(): Promise<void> {
+  await request('/auth/logout', { method: 'POST' });
+}
 
 // Weekly Plans
 export const createPlan = (weekStartDate: string): Promise<WeeklyPlanResponse> =>

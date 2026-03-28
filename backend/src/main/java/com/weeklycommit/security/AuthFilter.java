@@ -3,6 +3,7 @@ package com.weeklycommit.security;
 import com.weeklycommit.repository.AppUserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
@@ -29,21 +30,36 @@ public class AuthFilter extends OncePerRequestFilter {
             || !path.startsWith("/api")
             || path.equals("/api/health")
             || path.equals("/api/auth/login")
+            || path.equals("/api/auth/logout")
             || path.startsWith("/api-docs")
             || path.startsWith("/swagger-ui");
+    }
+
+    private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("auth_token".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
         throws ServletException, IOException {
         try {
-            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-            if (header == null || !header.startsWith("Bearer ")) {
+            String token = extractToken(request);
+            if (token == null) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing bearer token");
                 return;
             }
 
-            String token = header.substring("Bearer ".length());
             String userId = tokenService.verifyAndExtractUserId(token);
             var user = userRepository.findByUserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
