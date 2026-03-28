@@ -312,8 +312,9 @@ public class WeeklyPlanService {
             var src = carriedCommits.get(i);
             var newCommit = new WeeklyCommit();
             newCommit.setWeeklyPlan(newPlan);
-            newCommit.setTitle("[CF] " + src.getTitle());
+            newCommit.setTitle(src.getTitle());
             newCommit.setDescription(src.getDescription());
+            newCommit.setCarriedFromCommitId(src.getId());
             newCommit.setChessPriority(src.getChessPriority());
             newCommit.setOutcome(src.getOutcome());
             newCommit.setPlannedHours(src.getPlannedHours());
@@ -334,6 +335,12 @@ public class WeeklyPlanService {
             var outcome = c.getOutcome();
             var dobj = outcome.getDefiningObjective();
             var rc = dobj.getRallyCry();
+            String carriedFromWeek = null;
+            if (c.getCarriedFromCommitId() != null) {
+                carriedFromWeek = commitRepo.findById(c.getCarriedFromCommitId())
+                    .map(orig -> orig.getWeeklyPlan().getWeekStartDate().toString())
+                    .orElse(null);
+            }
             return new WeeklyPlanResponse.CommitResponse(
                 c.getId(),
                 c.getTitle(),
@@ -348,7 +355,8 @@ public class WeeklyPlanService {
                 c.getCompletionPct(),
                 c.getReconciliationNotes(),
                 c.isCarryForward(),
-                c.getSortOrder()
+                c.getSortOrder(),
+                carriedFromWeek
             );
         }).toList();
 

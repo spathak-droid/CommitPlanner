@@ -35,6 +35,7 @@ public record WeeklyPlanResponse(
         Integer completionPct,
         String reconciliationNotes,
         boolean carryForward,
-        int sortOrder
+        int sortOrder,
+        String carriedFromWeek
     ) {}
 }

@@ -48,6 +48,9 @@ public class WeeklyCommit {
     @Column(name = "carry_forward", nullable = false)
     private boolean carryForward = false;
 
+    @Column(name = "carried_from_commit_id")
+    private UUID carriedFromCommitId;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
@@ -79,6 +82,8 @@ public class WeeklyCommit {
     public void setReconciliationNotes(String reconciliationNotes) { this.reconciliationNotes = reconciliationNotes; }
     public boolean isCarryForward() { return carryForward; }
     public void setCarryForward(boolean carryForward) { this.carryForward = carryForward; }
+    public UUID getCarriedFromCommitId() { return carriedFromCommitId; }
+    public void setCarriedFromCommitId(UUID carriedFromCommitId) { this.carriedFromCommitId = carriedFromCommitId; }
     public int getSortOrder() { return sortOrder; }
     public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
     public LocalDateTime getCreatedAt() { return createdAt; }

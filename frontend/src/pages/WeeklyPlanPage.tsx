@@ -112,6 +112,11 @@ const WeeklyPlanPage: React.FC = () => {
 
   const handleTransition = async (action: string) => {
     if (!currentPlan) return;
+    if (action === 'CARRY_FORWARD') {
+      const cfCount = currentPlan.commits.filter(c => c.carryForward).length;
+      const confirmed = window.confirm(`${cfCount} items will carry forward to next week. Continue?`);
+      if (!confirmed) return;
+    }
     setTransitioning(true);
     try { setPlan(await api.transitionPlan(currentPlan.id, action)); showToast('Plan updated', 'success'); }
     catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
@@ -215,6 +220,13 @@ const WeeklyPlanPage: React.FC = () => {
           </div>
         </div>
 
+        {currentPlan.commits.some(c => c.carriedFromWeek) && (
+          <div className="mb-4 flex items-center gap-2 rounded-2xl bg-tertiary-container/50 px-4 py-3 text-sm text-on-tertiary-container">
+            <span className="material-symbols-outlined text-base">redo</span>
+            This plan includes {currentPlan.commits.filter(c => c.carriedFromWeek).length} items carried from a previous week
+          </div>
+        )}
+
         {/* Manager review feedback — visible to the contributor */}
         {currentPlan.reviewStatus && (
           <div className={`rounded-[1.25rem] p-5 flex items-start gap-4 ${
@@ -287,6 +299,13 @@ const WeeklyPlanPage: React.FC = () => {
   // DRAFT / LOCKED
   return (
     <div className="space-y-8">
+      {currentPlan.commits.some(c => c.carriedFromWeek) && (
+        <div className="mb-4 flex items-center gap-2 rounded-2xl bg-tertiary-container/50 px-4 py-3 text-sm text-on-tertiary-container">
+          <span className="material-symbols-outlined text-base">redo</span>
+          This plan includes {currentPlan.commits.filter(c => c.carriedFromWeek).length} items carried from a previous week
+        </div>
+      )}
+
       {currentPlan.reviewStatus && (
         <div className={`rounded-[1.25rem] p-5 shadow-sm ring-1 flex items-start gap-3 ${
           currentPlan.reviewStatus === 'APPROVED'
@@ -392,6 +411,12 @@ const WeeklyPlanPage: React.FC = () => {
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-bold text-on-surface">{commit.title}</h4>
                         <ChessBadge priority={commit.chessPriority} />
+                        {commit.carriedFromWeek && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-tertiary-container px-2.5 py-0.5 text-[10px] font-bold text-on-tertiary-container">
+                            <span className="material-symbols-outlined text-xs">redo</span>
+                            CF from {commit.carriedFromWeek}
+                          </span>
+                        )}
                       </div>
                       {commit.description && <p className="text-sm text-secondary mb-2">{commit.description}</p>}
                       <div className="flex items-center gap-2 text-xs text-secondary">

@@ -72,6 +72,7 @@ export interface CommitResponse {
   reconciliationNotes: string | null;
   carryForward: boolean;
   sortOrder: number;
+  carriedFromWeek: string | null;
 }
 
 export interface CreateCommitRequest {
