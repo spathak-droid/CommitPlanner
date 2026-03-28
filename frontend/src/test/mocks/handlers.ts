@@ -136,4 +136,5 @@ export const handlers = [
   http.get(`${BASE}/notifications`, () => HttpResponse.json([])),
   http.get(`${BASE}/notifications/unread-count`, () => HttpResponse.json({ count: 0 })),
   http.get(`${BASE}/ai/status`, () => HttpResponse.json({ enabled: false, model: null })),
+  http.post(`${BASE}/auth/logout`, () => new HttpResponse(null, { status: 200 })),
 ];
