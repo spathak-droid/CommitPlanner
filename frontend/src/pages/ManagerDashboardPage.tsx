@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { StatusBadge } from '../components/StatusBadge';
+import { FilterBar } from '../components/FilterBar';
 import { usePageTransition, useStaggerReveal, useMagneticButton } from '../hooks/useAnimations';
 import * as api from '../services/api';
-import type { ReviewInsight, WeeklyDigest } from '../types';
+import type { ChessPriority, PlanStatus, ReviewInsight, WeeklyDigest } from '../types';
 
 function getMonday(): string {
   const now = new Date();
@@ -24,6 +25,46 @@ const ManagerDashboardPage: React.FC = () => {
   const [insightLoading, setInsightLoading] = useState(false);
   const [weeklyDigest, setWeeklyDigest] = useState<WeeklyDigest | null>(null);
   const [digestLoading, setDigestLoading] = useState(false);
+
+  // Filter state — initialised from URL params
+  const [filterPriorities, setFilterPriorities] = useState<ChessPriority[]>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('priorities');
+    if (!raw) return [];
+    return raw.split(',').filter(Boolean) as ChessPriority[];
+  });
+  const [filterStatuses, setFilterStatuses] = useState<PlanStatus[]>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('statuses');
+    if (!raw) return [];
+    return raw.split(',').filter(Boolean) as PlanStatus[];
+  });
+  const [completionBelow, setCompletionBelow] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('completionBelow');
+    return raw ? Number(raw) : null;
+  });
+
+  // Sync filter state to URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (filterPriorities.length > 0) {
+      params.set('priorities', filterPriorities.join(','));
+    } else {
+      params.delete('priorities');
+    }
+    if (filterStatuses.length > 0) {
+      params.set('statuses', filterStatuses.join(','));
+    } else {
+      params.delete('statuses');
+    }
+    if (completionBelow != null) {
+      params.set('completionBelow', String(completionBelow));
+    } else {
+      params.delete('completionBelow');
+    }
+    window.history.replaceState({}, '', params.toString() ? `?${params.toString()}` : window.location.pathname);
+  }, [filterPriorities, filterStatuses, completionBelow]);
 
   useEffect(() => { fetchTeamData(weekStart); }, [weekStart, fetchTeamData]);
 
@@ -93,6 +134,22 @@ const ManagerDashboardPage: React.FC = () => {
       color: 'bg-primary-container',
     },
   ];
+
+  // Client-side filtered team plans
+  const filteredPlans = teamPlans.filter((tp) => {
+    if (filterPriorities.length > 0) {
+      const hasPriority = filterPriorities.some((p) => {
+        if (p === 'MUST_DO') return tp.mustDoCount > 0;
+        if (p === 'SHOULD_DO') return tp.shouldDoCount > 0;
+        if (p === 'NICE_TO_DO') return tp.niceToDoCount > 0;
+        return false;
+      });
+      if (!hasPriority) return false;
+    }
+    if (filterStatuses.length > 0 && tp.status && !filterStatuses.includes(tp.status)) return false;
+    if (completionBelow != null && tp.avgCompletionPct >= completionBelow) return false;
+    return true;
+  });
 
   // GSAP hooks — must be called before any conditional returns
   const pageRef = usePageTransition([selectedPlan, loadingTeam]);
@@ -481,11 +538,25 @@ const ManagerDashboardPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">Team Status & Alignment</h2>
-          <span className="text-sm font-semibold text-secondary">{teamPlans.length} Team Members</span>
+          <span className="text-sm font-semibold text-secondary">
+            {filteredPlans.length !== teamPlans.length
+              ? `${filteredPlans.length} of ${teamPlans.length} Members`
+              : `${teamPlans.length} Team Members`}
+          </span>
         </div>
 
+        <FilterBar
+          priorities={filterPriorities}
+          onPrioritiesChange={setFilterPriorities}
+          statuses={filterStatuses}
+          onStatusesChange={setFilterStatuses}
+          completionBelow={completionBelow}
+          onCompletionBelowChange={setCompletionBelow}
+          onClear={() => { setFilterPriorities([]); setFilterStatuses([]); setCompletionBelow(null); }}
+        />
+
         <div ref={teamListRef} className="space-y-3">
-          {teamPlans.map((tp) => {
+          {filteredPlans.map((tp) => {
             const health = tp.avgCompletionPct >= 80 ? { icon: 'check_circle', label: 'Excellent', color: 'text-primary', fill: true }
               : tp.avgCompletionPct >= 50 ? { icon: 'radio_button_checked', label: 'Stable', color: 'text-secondary', fill: false }
               : tp.avgCompletionPct > 0 ? { icon: 'error', label: 'Misaligned', color: 'text-error', fill: true }
@@ -537,8 +608,12 @@ const ManagerDashboardPage: React.FC = () => {
             );
           })}
 
-          {teamPlans.length === 0 && (
-            <div className="text-center py-16 text-secondary">No team plans found for this week</div>
+          {filteredPlans.length === 0 && (
+            <div className="text-center py-16 text-secondary">
+              {teamPlans.length === 0
+                ? 'No team plans found for this week'
+                : 'No team members match the current filters'}
+            </div>
           )}
         </div>
       </div>
