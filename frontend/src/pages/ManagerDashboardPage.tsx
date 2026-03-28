@@ -104,6 +104,8 @@ const ManagerDashboardPage: React.FC = () => {
   }
 
   // Drill-down view
+  const selectedUserName = teamPlans.find(tp => tp.userId === selectedPlan?.userId)?.fullName ?? selectedPlan?.userId ?? '';
+
   if (selectedPlan) {
     return (
       <div ref={pageRef} className="space-y-8">
@@ -116,10 +118,10 @@ const ManagerDashboardPage: React.FC = () => {
         <div className="bg-surface-lowest rounded-[1rem] p-8 shadow-[0px_24px_48px_rgba(27,27,30,0.04)] ring-1 ring-outline-variant/10">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-14 h-14 rounded-full bg-primary-container flex items-center justify-center border-2 border-primary-container">
-              <span className="text-lg font-bold text-on-primary-container">{selectedPlan.userId.slice(0, 2).toUpperCase()}</span>
+              <span className="text-lg font-bold text-on-primary-container">{selectedUserName.slice(0, 2).toUpperCase()}</span>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-on-surface">{selectedPlan.userId}</h2>
+              <h2 className="text-xl font-bold text-on-surface">{selectedUserName}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <StatusBadge status={selectedPlan.status} />
                 <span className="text-xs text-secondary">Week of {selectedPlan.weekStartDate}</span>
@@ -495,7 +497,7 @@ const ManagerDashboardPage: React.FC = () => {
                 className="bg-surface-lowest hover:bg-white transition-all cursor-pointer group rounded-full p-3 flex items-center justify-between shadow-sm ring-1 ring-outline-variant/10">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center border-2 border-primary-container flex-shrink-0">
-                    <span className="text-sm font-bold text-on-primary-container">{tp.userId.slice(0, 2).toUpperCase()}</span>
+                    <span className="text-sm font-bold text-on-primary-container">{tp.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}</span>
                   </div>
                   <div>
                     <h4 className="font-bold text-on-surface">{tp.fullName}</h4>
