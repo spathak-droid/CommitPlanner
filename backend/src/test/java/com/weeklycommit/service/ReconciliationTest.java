@@ -90,7 +90,7 @@ class ReconciliationTest {
         assertEquals(PlanStatus.DRAFT, nextPlanEntity.get().getStatus());
         var nextPlan = planService.getPlan(nextPlanEntity.get().getId());
         assertEquals(1, nextPlan.commits().size());
-        assertTrue(nextPlan.commits().get(0).title().contains("[CF]"));
+        assertNotNull(nextPlan.commits().get(0).carriedFromWeek());
     }
 
     @Test
