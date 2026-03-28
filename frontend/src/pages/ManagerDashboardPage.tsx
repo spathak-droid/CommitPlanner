@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { StatusBadge } from '../components/StatusBadge';
+import { CommitComments } from '../components/CommitComments';
 import { FilterBar } from '../components/FilterBar';
 import { usePageTransition, useStaggerReveal, useMagneticButton } from '../hooks/useAnimations';
 import * as api from '../services/api';
@@ -266,6 +267,9 @@ const ManagerDashboardPage: React.FC = () => {
                   {c.description && !c.reconciliationNotes && (
                     <p className="text-sm text-secondary">{c.description}</p>
                   )}
+
+                  {/* Comments thread */}
+                  <CommitComments commitId={c.id} />
                 </div>
               );
             })}
@@ -430,11 +434,11 @@ const ManagerDashboardPage: React.FC = () => {
             <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)}
               className="px-4 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
-          <a href={api.getTeamExportUrl(weekStart, 'csv')} target="_blank" rel="noopener noreferrer"
+          <button onClick={() => api.downloadTeamExport(weekStart, 'csv')}
             className="px-6 py-3 bg-primary-container text-on-primary-container rounded-full font-bold text-sm flex items-center gap-2 shadow-sm hover:opacity-90 transition-all">
             <span className="material-symbols-outlined text-lg">download</span>
             Export Team CSV
-          </a>
+          </button>
         </div>
       </div>
 
