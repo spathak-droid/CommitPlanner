@@ -6,6 +6,7 @@ import com.weeklycommit.entity.WeeklyPlan;
 import com.weeklycommit.enums.ChessPriority;
 import com.weeklycommit.enums.PlanStatus;
 import com.weeklycommit.repository.AppUserRepository;
+import com.weeklycommit.repository.ManagerAssignmentRepository;
 import com.weeklycommit.repository.ManagerReviewRepository;
 import com.weeklycommit.repository.OutcomeRepository;
 import com.weeklycommit.repository.WeeklyCommitRepository;
@@ -33,6 +34,8 @@ public class WeeklyPlanService {
     private final ManagerReviewRepository reviewRepo;
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
+    private final ManagerAssignmentRepository assignmentRepo;
 
     public WeeklyPlanService(
         WeeklyPlanRepository planRepo,
@@ -41,7 +44,9 @@ public class WeeklyPlanService {
         AppUserRepository userRepo,
         ManagerReviewRepository reviewRepo,
         AuthorizationService authorizationService,
-        AuditService auditService
+        AuditService auditService,
+        NotificationService notificationService,
+        ManagerAssignmentRepository assignmentRepo
     ) {
         this.planRepo = planRepo;
         this.commitRepo = commitRepo;
@@ -50,6 +55,8 @@ public class WeeklyPlanService {
         this.reviewRepo = reviewRepo;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
+        this.notificationService = notificationService;
+        this.assignmentRepo = assignmentRepo;
     }
 
     public WeeklyPlanResponse createPlan(CreateWeeklyPlanRequest req) {
@@ -254,8 +261,28 @@ public class WeeklyPlanService {
         plan = planRepo.save(plan);
         auditService.log("WEEKLY_PLAN", plan.getId(), "TRANSITION", Map.of("from", oldStatus, "to", plan.getStatus().name()));
 
+        // Auto-trigger notifications on state transitions
+        if (targetStatus == PlanStatus.LOCKED) {
+            // Notify manager that IC locked their plan
+            var assignments = assignmentRepo.findByMemberUserId(plan.getUserId());
+            var userName = userRepo.findByUserIdAndActiveTrue(plan.getUserId())
+                .map(u -> u.getFullName())
+                .orElse(plan.getUserId());
+            for (var assignment : assignments) {
+                notificationService.send(assignment.getManager().getUserId(), "PLAN_LOCKED",
+                    userName + " locked their week of " + plan.getWeekStartDate(),
+                    "Plan is ready for review");
+            }
+        }
+
         // Handle carry forward: create next week's plan with incomplete items
         if (targetStatus == PlanStatus.CARRY_FORWARD) {
+            long cfCount = plan.getCommits().stream().filter(WeeklyCommit::isCarryForward).count();
+            if (cfCount > 0) {
+                notificationService.sendSystem(plan.getUserId(), "SYSTEM",
+                    cfCount + " items carried forward to " + plan.getWeekStartDate().plusWeeks(1),
+                    "Items marked for carry-forward have been moved to next week");
+            }
             createCarryForwardPlan(plan);
         }
 
