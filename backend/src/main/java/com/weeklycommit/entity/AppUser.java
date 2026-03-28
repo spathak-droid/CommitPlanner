@@ -25,6 +25,12 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 128)
     private String passwordHash;
 
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "email_notifications_enabled", nullable = false)
+    private boolean emailNotificationsEnabled = true;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -41,6 +47,10 @@ public class AppUser {
     public void setPasswordSalt(String passwordSalt) { this.passwordSalt = passwordSalt; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public boolean isEmailNotificationsEnabled() { return emailNotificationsEnabled; }
+    public void setEmailNotificationsEnabled(boolean emailNotificationsEnabled) { this.emailNotificationsEnabled = emailNotificationsEnabled; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public LocalDateTime getCreatedAt() { return createdAt; }
