@@ -22,6 +22,7 @@ const WeeklyPlanPage: React.FC = () => {
     commitmentsActionTick,
   } = useStore();
   const [showForm, setShowForm] = useState(false);
+  const [editingCommitId, setEditingCommitId] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<import('../types').CommitSuggestionResponse | null>(null);
   const [aiInput, setAiInput] = useState('');
@@ -103,6 +104,14 @@ const WeeklyPlanPage: React.FC = () => {
     if (!currentPlan) return;
     try { setPlan(await api.addCommit(currentPlan.id, data)); setShowForm(false); showToast('Commitment added', 'success'); }
     catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
+  };
+
+  const handleEditCommit = async (commitId: string, data: CreateCommitRequest) => {
+    try {
+      setPlan(await api.updateCommit(commitId, data));
+      setEditingCommitId(null);
+      showToast('Commitment updated', 'success');
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Failed to update', 'error'); }
   };
 
   const handleDeleteCommit = async (commitId: string) => {
@@ -414,8 +423,24 @@ const WeeklyPlanPage: React.FC = () => {
           return (
             <div key={priority} className="space-y-2">
               {commits.map((commit) => (
+                editingCommitId === commit.id ? (
+                  <div key={commit.id} className="rounded-[1rem] ring-2 ring-tertiary/30">
+                    <CommitForm
+                      onSubmit={(data) => handleEditCommit(commit.id, data)}
+                      onCancel={() => setEditingCommitId(null)}
+                      initialValues={{
+                        title: commit.title,
+                        description: commit.description || '',
+                        chessPriority: commit.chessPriority,
+                        outcomeId: commit.outcomeId,
+                        plannedHours: commit.plannedHours,
+                      }}
+                    />
+                  </div>
+                ) : (
                 <div key={commit.id}
-                  className="bg-surface-lowest hover:bg-white transition-all group rounded-[1rem] p-5 shadow-sm ring-1 ring-outline-variant/10">
+                  onClick={() => isDraft && setEditingCommitId(commit.id)}
+                  className={`bg-surface-lowest hover:bg-white transition-all group rounded-[1rem] p-5 shadow-sm ring-1 ring-outline-variant/10 ${isDraft ? 'cursor-pointer' : ''}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -426,6 +451,9 @@ const WeeklyPlanPage: React.FC = () => {
                             <span className="material-symbols-outlined text-xs">redo</span>
                             CF from {commit.carriedFromWeek}
                           </span>
+                        )}
+                        {isDraft && (
+                          <span className="opacity-0 group-hover:opacity-100 text-[10px] text-secondary transition-all">click to edit</span>
                         )}
                       </div>
                       {commit.description && <p className="text-sm text-secondary mb-2">{commit.description}</p>}
@@ -442,13 +470,14 @@ const WeeklyPlanPage: React.FC = () => {
                       </div>
                     </div>
                     {isDraft && (
-                      <button onClick={() => handleDeleteCommit(commit.id)}
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCommit(commit.id); }}
                         className="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-error-container text-secondary hover:text-error transition-all ml-3">
                         <span className="material-symbols-outlined text-lg">close</span>
                       </button>
                     )}
                   </div>
                 </div>
+                )
               ))}
             </div>
           );

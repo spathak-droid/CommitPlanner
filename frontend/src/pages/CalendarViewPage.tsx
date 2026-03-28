@@ -18,7 +18,11 @@ const STATUS_COLORS: Record<string, { dot: string; bg: string; label: string }> 
   NONE: { dot: 'bg-gray-300', bg: 'bg-gray-50', label: 'No Plan' },
 };
 
-const CalendarViewPage: React.FC = () => {
+interface Props {
+  onNavigateToPlan?: () => void;
+}
+
+const CalendarViewPage: React.FC<Props> = ({ onNavigateToPlan }) => {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,10 +61,8 @@ const CalendarViewPage: React.FC = () => {
   };
 
   const handleWeekClick = (entry: CalendarEntry) => {
-    if (entry.planId) {
-      // Navigate to plan — in this SPA we can't directly route, but we can show a toast or open in new tab
-      // For now, we rely on existing routing; a real implementation would call onViewChange
-      window.open(`#plan/${entry.planId}`, '_self');
+    if (entry.planId && onNavigateToPlan) {
+      onNavigateToPlan();
     }
   };
 

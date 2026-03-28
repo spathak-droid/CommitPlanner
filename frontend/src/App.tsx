@@ -115,7 +115,7 @@ const App: React.FC<AppProps> = ({ userId, role, apiBaseUrl, authToken }) => {
       case 'capacity':
         return <CapacityPlanningPage />;
       case 'calendar':
-        return <CalendarViewPage />;
+        return <CalendarViewPage onNavigateToPlan={() => handleViewChange('commitments')} />;
       case 'rcdo':
         return <RcdoHierarchyPage />;
       case 'settings':

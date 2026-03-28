@@ -118,6 +118,12 @@ export const addCommit = (planId: string, data: CreateCommitRequest): Promise<We
     body: JSON.stringify(data),
   });
 
+export const updateCommit = (commitId: string, data: Partial<CreateCommitRequest>): Promise<WeeklyPlanResponse> =>
+  request(`/commits/${commitId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+
 export const deleteCommit = (commitId: string): Promise<void> =>
   request(`/commits/${commitId}`, { method: 'DELETE' });
 

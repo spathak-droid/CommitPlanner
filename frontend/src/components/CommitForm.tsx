@@ -6,6 +6,13 @@ import * as api from '../services/api';
 interface Props {
   onSubmit: (data: CreateCommitRequest) => Promise<void>;
   onCancel: () => void;
+  initialValues?: {
+    title: string;
+    description: string;
+    chessPriority: ChessPriority;
+    outcomeId: string;
+    plannedHours: number | null;
+  };
 }
 
 const priorities: { value: ChessPriority; label: string; active: string }[] = [
@@ -14,12 +21,12 @@ const priorities: { value: ChessPriority; label: string; active: string }[] = [
   { value: 'NICE_TO_DO', label: 'Nice to Do', active: 'bg-primary-container text-on-primary-container' },
 ];
 
-export const CommitForm: React.FC<Props> = ({ onSubmit, onCancel }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [chessPriority, setChessPriority] = useState<ChessPriority>('SHOULD_DO');
-  const [outcomeId, setOutcomeId] = useState('');
-  const [plannedHours, setPlannedHours] = useState('');
+export const CommitForm: React.FC<Props> = ({ onSubmit, onCancel, initialValues }) => {
+  const [title, setTitle] = useState(initialValues?.title ?? '');
+  const [description, setDescription] = useState(initialValues?.description ?? '');
+  const [chessPriority, setChessPriority] = useState<ChessPriority>(initialValues?.chessPriority ?? 'SHOULD_DO');
+  const [outcomeId, setOutcomeId] = useState(initialValues?.outcomeId ?? '');
+  const [plannedHours, setPlannedHours] = useState(initialValues?.plannedHours?.toString() ?? '');
   const [submitting, setSubmitting] = useState(false);
 
   // AI state
