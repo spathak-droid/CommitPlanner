@@ -209,4 +209,24 @@ export interface HoursAccuracyPoint { commitId: string; title: string; plannedHo
 export interface CarryForwardPoint { weekStart: string; carryForwardPct: number; }
 export interface CoverageTrendPoint { weekStart: string; alignmentRatePct: number; }
 export interface CapacityEntry { userId: string; fullName: string; totalPlannedHours: number; capacityHours: number; priorityBreakdown: Record<string, number>; }
-export interface CalendarEntry { planId: string | null; weekStartDate: string; status: PlanStatus | null; commitCount: number; avgCompletionPct: number; }
+export interface CalendarEntry { planId: string | null; weekStartDate: string; status: PlanStatus | null; commitCount: number; avgCompletionPct: number; userId: string | null; userName: string | null; }
+
+// Templates
+export interface TemplateResponse {
+  id: string;
+  name: string;
+  commits: string; // JSON string
+  createdAt: string;
+}
+
+// Comments
+export interface CommentResponse {
+  id: string;
+  commitId: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  parentCommentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

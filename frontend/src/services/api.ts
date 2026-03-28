@@ -24,7 +24,11 @@ import type {
   CoverageTrendPoint,
   CapacityEntry,
   CalendarEntry,
+  CommentResponse,
+  TemplateResponse,
 } from '../types';
+
+export type { TemplateResponse };
 
 const rawApiUrl = (window as any).__API_URL__;
 let BASE_URL = rawApiUrl && !rawApiUrl.includes('%%') ? rawApiUrl : 'http://localhost:8080/api';
@@ -293,12 +297,75 @@ export async function fetchCapacity(weekStart: string): Promise<CapacityEntry[]>
 export async function fetchCalendar(from: string, to: string): Promise<CalendarEntry[]> {
   return request(`/weekly-plans/calendar?from=${from}&to=${to}`);
 }
+// Comments
+export const fetchComments = (commitId: string): Promise<CommentResponse[]> =>
+  request(`/commits/${commitId}/comments`);
+
+export const addComment = (commitId: string, body: string, parentCommentId?: string): Promise<CommentResponse> =>
+  request(`/commits/${commitId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body, parentCommentId: parentCommentId ?? null }),
+  });
+
+export const updateComment = (commentId: string, body: string): Promise<CommentResponse> =>
+  request(`/comments/${commentId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ body }),
+  });
+
+export const deleteCommentById = (commentId: string): Promise<void> =>
+  request(`/comments/${commentId}`, { method: 'DELETE' });
+
+// Templates
+export const fetchTemplates = (): Promise<TemplateResponse[]> => request('/templates');
+
+export const saveAsTemplate = (planId: string, name: string): Promise<TemplateResponse> =>
+  request('/templates', {
+    method: 'POST',
+    body: JSON.stringify({ planId, name }),
+  });
+
+export const applyTemplate = (templateId: string, planId: string): Promise<unknown> =>
+  request(`/templates/${templateId}/apply?planId=${planId}`, { method: 'POST' });
+
+export const deleteTemplate = async (templateId: string): Promise<void> => {
+  await request(`/templates/${templateId}`, { method: 'DELETE' });
+};
+
 // Export
-export function getExportUrl(planId: string, format: 'csv' | 'pdf'): string {
-  const base = (window as any).__API_URL__ || 'http://localhost:8080/api';
-  return `${base}/export/plan/${planId}?format=${format}`;
+export async function downloadExport(planId: string, format: 'csv' | 'pdf'): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (AUTH_TOKEN) headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+  const res = await fetch(`${BASE_URL}/export/plan/${planId}?format=${format}`, {
+    credentials: 'include',
+    headers,
+  });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `plan.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
-export function getTeamExportUrl(weekStart: string, format: string): string {
-  const base = (window as any).__API_URL__ || 'http://localhost:8080/api';
-  return `${base}/export/team?weekStart=${weekStart}&format=${format}`;
+export async function downloadTeamExport(weekStart: string, format: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (AUTH_TOKEN) headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+  const res = await fetch(`${BASE_URL}/export/team?weekStart=${weekStart}&format=${format}`, {
+    credentials: 'include',
+    headers,
+  });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `team-${weekStart}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

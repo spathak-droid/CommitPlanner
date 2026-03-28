@@ -5,9 +5,10 @@ import { ReconciliationRow } from '../components/ReconciliationRow';
 import { StatusBadge } from '../components/StatusBadge';
 import { ChessBadge } from '../components/ChessBadge';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { CommitComments } from '../components/CommitComments';
 import { usePageTransition, useStaggerReveal } from '../hooks/useAnimations';
 import * as api from '../services/api';
-import type { ChessPriority, CreateCommitRequest, ReconcileCommitRequest } from '../types';
+import type { ChessPriority, CreateCommitRequest, ReconcileCommitRequest, TemplateResponse } from '../types';
 
 const PRIORITY_ORDER: ChessPriority[] = ['MUST_DO', 'SHOULD_DO', 'NICE_TO_DO'];
 
@@ -29,6 +30,13 @@ const WeeklyPlanPage: React.FC = () => {
   const [aiSuggestion, setAiSuggestion] = useState<import('../types').CommitSuggestionResponse | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const [templates, setTemplates] = useState<TemplateResponse[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
 
   const handleAiSuggest = async () => {
     if (!aiInput.trim()) return;
@@ -54,6 +62,50 @@ const WeeklyPlanPage: React.FC = () => {
       setAiInput('');
       showToast('AI-suggested commitment added', 'success');
     } catch (e) { showToast(e instanceof Error ? e.message : 'Failed to add', 'error'); }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!currentPlan || !templateName.trim()) return;
+    setSavingTemplate(true);
+    try {
+      await api.saveAsTemplate(currentPlan.id, templateName.trim());
+      setTemplateName('');
+      setShowSaveTemplate(false);
+      showToast('Template saved', 'success');
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Failed to save template', 'error'); }
+    finally { setSavingTemplate(false); }
+  };
+
+  const handleOpenTemplateList = async () => {
+    setShowTemplateList((prev) => !prev);
+    if (!showTemplateList) {
+      setTemplatesLoading(true);
+      try {
+        setTemplates(await api.fetchTemplates());
+      } catch { showToast('Failed to load templates', 'error'); }
+      finally { setTemplatesLoading(false); }
+    }
+  };
+
+  const handleApplyTemplate = async (templateId: string) => {
+    if (!currentPlan) return;
+    setApplyingTemplate(templateId);
+    try {
+      await api.applyTemplate(templateId, currentPlan.id);
+      setPlan(await api.fetchPlan(currentPlan.id));
+      setShowTemplateList(false);
+      showToast('Template applied', 'success');
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Failed to apply template', 'error'); }
+    finally { setApplyingTemplate(null); }
+  };
+
+  const handleDeleteTemplate = async (e: React.MouseEvent, templateId: string) => {
+    e.stopPropagation();
+    try {
+      await api.deleteTemplate(templateId);
+      setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+      showToast('Template deleted', 'success');
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Failed to delete template', 'error'); }
   };
 
   const pageRef = usePageTransition([currentPlan, loadingPlan]);
@@ -330,7 +382,12 @@ const WeeklyPlanPage: React.FC = () => {
         </div>
 
         <div className="space-y-5">
-          {currentPlan.commits.map((c) => <ReconciliationRow key={c.id} commit={c} onReconcile={handleReconcile} disabled={!isReconciling} />)}
+          {currentPlan.commits.map((c) => (
+            <div key={c.id}>
+              <ReconciliationRow commit={c} onReconcile={handleReconcile} disabled={!isReconciling} />
+              <CommitComments commitId={c.id} />
+            </div>
+          ))}
         </div>
         <ConfirmModal
           open={confirmModal !== null}
@@ -421,6 +478,23 @@ const WeeklyPlanPage: React.FC = () => {
                     Lock Plan
                   </button>
                 )}
+                {isDraft && currentPlan.commits.length > 0 && (
+                  <button onClick={() => { setShowSaveTemplate((p) => !p); setShowTemplateList(false); }}
+                    className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">bookmark_add</span>
+                    Save as Template
+                  </button>
+                )}
+                {isDraft && (
+                  <div className="relative">
+                    <button onClick={() => { handleOpenTemplateList(); setShowSaveTemplate(false); }}
+                      className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center gap-2">
+                      <span className="material-symbols-outlined text-lg">library_books</span>
+                      Apply Template
+                      <span className="material-symbols-outlined text-sm">{showTemplateList ? 'expand_less' : 'expand_more'}</span>
+                    </button>
+                  </div>
+                )}
                 {currentPlan.status === 'LOCKED' && (
                   <button onClick={() => handleTransition('START_RECONCILIATION')} disabled={transitioning}
                     className="px-5 py-3 bg-tertiary text-on-tertiary rounded-full font-bold text-sm shadow-lg shadow-tertiary/20 hover:-translate-y-0.5 disabled:opacity-40 transition-all flex items-center gap-2">
@@ -433,6 +507,88 @@ const WeeklyPlanPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {showSaveTemplate && isDraft && currentPlan.commits.length > 0 && (
+        <div className="rounded-[1.25rem] bg-white/90 p-5 shadow-[0px_10px_30px_rgba(27,27,30,0.06)] ring-1 ring-outline-variant/10 flex flex-col gap-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-secondary">Save as Template</p>
+          <p className="text-sm text-secondary">Give this set of {currentPlan.commits.length} commitment{currentPlan.commits.length !== 1 ? 's' : ''} a name so you can reuse them in future weeks.</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveTemplate()}
+              placeholder="e.g. Sprint Kickoff Template"
+              className="flex-1 bg-white border border-outline-variant/15 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary/30"
+              autoFocus
+            />
+            <button onClick={handleSaveTemplate} disabled={!templateName.trim() || savingTemplate}
+              className="px-5 py-3 bg-tertiary text-on-tertiary rounded-full font-bold text-sm disabled:opacity-40 transition-all flex items-center gap-2 shadow-lg shadow-tertiary/20">
+              {savingTemplate ? (
+                <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+              ) : (
+                <span className="material-symbols-outlined text-base">bookmark_add</span>
+              )}
+              Save
+            </button>
+            <button onClick={() => { setShowSaveTemplate(false); setTemplateName(''); }}
+              className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showTemplateList && isDraft && (
+        <div className="rounded-[1.25rem] bg-white/90 p-5 shadow-[0px_10px_30px_rgba(27,27,30,0.06)] ring-1 ring-outline-variant/10 space-y-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-secondary">Apply Template</p>
+          {templatesLoading && (
+            <div className="flex items-center gap-2 text-sm text-secondary py-4">
+              <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+              Loading templates…
+            </div>
+          )}
+          {!templatesLoading && templates.length === 0 && (
+            <p className="text-sm text-secondary py-4 text-center">No templates saved yet. Save a plan as a template first.</p>
+          )}
+          {!templatesLoading && templates.length > 0 && (
+            <div className="space-y-2">
+              {templates.map((t) => {
+                let commitCount = 0;
+                try { commitCount = (JSON.parse(t.commits) as unknown[]).length; } catch { /* ignore */ }
+                return (
+                  <div key={t.id}
+                    className="flex items-center justify-between rounded-[0.75rem] bg-surface-lowest hover:bg-white transition-colors px-4 py-3 ring-1 ring-outline-variant/10 group">
+                    <button
+                      onClick={() => handleApplyTemplate(t.id)}
+                      disabled={applyingTemplate === t.id}
+                      className="flex-1 text-left flex items-center gap-3 disabled:opacity-50">
+                      {applyingTemplate === t.id ? (
+                        <span className="material-symbols-outlined text-base animate-spin text-tertiary">progress_activity</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-base text-tertiary">library_books</span>
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface">{t.name}</p>
+                        <p className="text-xs text-secondary">{commitCount} commitment{commitCount !== 1 ? 's' : ''} · saved {new Date(t.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </button>
+                    <button onClick={(e) => handleDeleteTemplate(e, t.id)}
+                      className="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-error-container text-secondary hover:text-error transition-all ml-2">
+                      <span className="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <button onClick={() => setShowTemplateList(false)}
+            className="text-xs text-secondary hover:text-on-surface transition-colors flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">close</span>
+            Close
+          </button>
+        </div>
+      )}
 
       {showForm && <CommitForm onSubmit={handleAddCommit} onCancel={() => setShowForm(false)} />}
 
