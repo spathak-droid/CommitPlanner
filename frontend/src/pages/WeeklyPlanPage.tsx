@@ -4,6 +4,7 @@ import { CommitForm } from '../components/CommitForm';
 import { ReconciliationRow } from '../components/ReconciliationRow';
 import { StatusBadge } from '../components/StatusBadge';
 import { ChessBadge } from '../components/ChessBadge';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { usePageTransition, useStaggerReveal } from '../hooks/useAnimations';
 import * as api from '../services/api';
 import type { ChessPriority, CreateCommitRequest, ReconcileCommitRequest } from '../types';
@@ -24,6 +25,7 @@ const WeeklyPlanPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCommitId, setEditingCommitId] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; icon: string; onConfirm: () => void } | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<import('../types').CommitSuggestionResponse | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -119,17 +121,36 @@ const WeeklyPlanPage: React.FC = () => {
     catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
   };
 
-  const handleTransition = async (action: string) => {
+  const doTransition = async (action: string) => {
     if (!currentPlan) return;
-    if (action === 'CARRY_FORWARD') {
-      const cfCount = currentPlan.commits.filter(c => c.carryForward).length;
-      const confirmed = window.confirm(`${cfCount} items will carry forward to next week. Continue?`);
-      if (!confirmed) return;
-    }
     setTransitioning(true);
     try { setPlan(await api.transitionPlan(currentPlan.id, action)); showToast('Plan updated', 'success'); }
     catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
     finally { setTransitioning(false); }
+  };
+
+  const handleTransition = (action: string) => {
+    if (!currentPlan) return;
+    if (action === 'CARRY_FORWARD') {
+      const cfCount = currentPlan.commits.filter(c => c.carryForward).length;
+      setConfirmModal({
+        title: 'Carry Forward',
+        message: `${cfCount} item${cfCount !== 1 ? 's' : ''} will carry forward to next week. Incomplete commitments will appear in your next weekly plan.`,
+        icon: 'forward',
+        onConfirm: () => { setConfirmModal(null); void doTransition(action); },
+      });
+      return;
+    }
+    if (action === 'LOCK') {
+      setConfirmModal({
+        title: 'Lock Plan',
+        message: `Once locked, you won't be able to add or remove commitments. ${currentPlan.commits.length} commitment${currentPlan.commits.length !== 1 ? 's' : ''} will be locked for the week.`,
+        icon: 'lock',
+        onConfirm: () => { setConfirmModal(null); void doTransition(action); },
+      });
+      return;
+    }
+    void doTransition(action);
   };
 
   const handleReconcile = async (commitId: string, data: ReconcileCommitRequest) => {
@@ -551,6 +572,14 @@ const WeeklyPlanPage: React.FC = () => {
           <p className="text-secondary font-medium">No commitments yet</p>
         </div>
       )}
+      <ConfirmModal
+        open={confirmModal !== null}
+        title={confirmModal?.title ?? ''}
+        message={confirmModal?.message ?? ''}
+        icon={confirmModal?.icon ?? 'help_outline'}
+        onConfirm={confirmModal?.onConfirm ?? (() => {})}
+        onCancel={() => setConfirmModal(null)}
+      />
     </div>
   );
 };
