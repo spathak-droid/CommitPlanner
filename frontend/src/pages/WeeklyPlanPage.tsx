@@ -302,16 +302,16 @@ const WeeklyPlanPage: React.FC = () => {
             <p className="text-sm text-secondary">Each item keeps its original planning context so the review stays aligned with the rest of the workflow.</p>
           </div>
           <div className="flex gap-3 flex-wrap">
-            <a href={api.getExportUrl(currentPlan.id, 'csv')} target="_blank" rel="noopener noreferrer"
+            <button onClick={() => api.downloadExport(currentPlan.id, 'csv')}
               className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">download</span>
               Export CSV
-            </a>
-            <a href={api.getExportUrl(currentPlan.id, 'pdf')} target="_blank" rel="noopener noreferrer"
+            </button>
+            <button onClick={() => api.downloadExport(currentPlan.id, 'pdf')}
               className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
               Export PDF
-            </a>
+            </button>
             {isReconciling && allDone && (
               <button onClick={() => handleTransition('RECONCILE')} disabled={transitioning}
                 className="px-6 py-3 bg-tertiary text-on-tertiary rounded-full font-bold shadow-lg shadow-tertiary/20 disabled:opacity-40 transition-all flex items-center justify-center gap-2">
@@ -332,6 +332,14 @@ const WeeklyPlanPage: React.FC = () => {
         <div className="space-y-5">
           {currentPlan.commits.map((c) => <ReconciliationRow key={c.id} commit={c} onReconcile={handleReconcile} disabled={!isReconciling} />)}
         </div>
+        <ConfirmModal
+          open={confirmModal !== null}
+          title={confirmModal?.title ?? ''}
+          message={confirmModal?.message ?? ''}
+          icon={confirmModal?.icon ?? 'help_outline'}
+          onConfirm={confirmModal?.onConfirm ?? (() => {})}
+          onCancel={() => setConfirmModal(null)}
+        />
       </div>
     );
   }
