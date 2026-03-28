@@ -26,6 +26,8 @@ dependencies {
     implementation("com.anthropic:anthropic-java:1.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
+    implementation("com.bucket4j:bucket4j-core:8.10.1")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
