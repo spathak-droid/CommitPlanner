@@ -201,3 +201,12 @@ export interface AiStatus {
   enabled: boolean;
   model: string | null;
 }
+
+// Analytics types
+export interface VelocityPoint { weekStart: string; completedCount: number; totalCount: number; }
+export interface CompletionPoint { weekStart: string; avgCompletionPct: number; }
+export interface HoursAccuracyPoint { commitId: string; title: string; plannedHours: number; actualHours: number; }
+export interface CarryForwardPoint { weekStart: string; carryForwardPct: number; }
+export interface CoverageTrendPoint { weekStart: string; alignmentRatePct: number; }
+export interface CapacityEntry { userId: string; fullName: string; totalPlannedHours: number; capacityHours: number; priorityBreakdown: Record<string, number>; }
+export interface CalendarEntry { planId: string | null; weekStartDate: string; status: PlanStatus | null; commitCount: number; avgCompletionPct: number; }

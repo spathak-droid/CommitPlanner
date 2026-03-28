@@ -17,6 +17,13 @@ import type {
   AlignmentSuggestion,
   WeeklyDigest,
   AiStatus,
+  VelocityPoint,
+  CompletionPoint,
+  HoursAccuracyPoint,
+  CarryForwardPoint,
+  CoverageTrendPoint,
+  CapacityEntry,
+  CalendarEntry,
 } from '../types';
 
 const rawApiUrl = (window as any).__API_URL__;
@@ -257,3 +264,35 @@ export const getAlignmentSuggestions = (weekStart?: string): Promise<AlignmentSu
 
 export const getWeeklyDigest = (weekStart: string): Promise<WeeklyDigest> =>
   request(`/ai/weekly-digest?weekStart=${weekStart}`);
+
+// Analytics
+export async function fetchVelocity(from: string, to: string): Promise<VelocityPoint[]> {
+  return request(`/analytics/velocity?from=${from}&to=${to}`);
+}
+export async function fetchCompletion(from: string, to: string): Promise<CompletionPoint[]> {
+  return request(`/analytics/completion?from=${from}&to=${to}`);
+}
+export async function fetchHoursAccuracy(from: string, to: string): Promise<HoursAccuracyPoint[]> {
+  return request(`/analytics/hours-accuracy?from=${from}&to=${to}`);
+}
+export async function fetchCarryForwardRate(from: string, to: string): Promise<CarryForwardPoint[]> {
+  return request(`/analytics/carry-forward-rate?from=${from}&to=${to}`);
+}
+export async function fetchRcdoCoverage(from: string, to: string): Promise<CoverageTrendPoint[]> {
+  return request(`/analytics/rcdo-coverage?from=${from}&to=${to}`);
+}
+export async function fetchCapacity(weekStart: string): Promise<CapacityEntry[]> {
+  return request(`/analytics/capacity?weekStart=${weekStart}`);
+}
+export async function fetchCalendar(from: string, to: string): Promise<CalendarEntry[]> {
+  return request(`/weekly-plans/calendar?from=${from}&to=${to}`);
+}
+// Export
+export function getExportUrl(planId: string, format: 'csv' | 'pdf'): string {
+  const base = (window as any).__API_URL__ || 'http://localhost:8080/api';
+  return `${base}/export/plan/${planId}?format=${format}`;
+}
+export function getTeamExportUrl(weekStart: string, format: string): string {
+  const base = (window as any).__API_URL__ || 'http://localhost:8080/api';
+  return `${base}/export/team?weekStart=${weekStart}&format=${format}`;
+}

@@ -271,7 +271,17 @@ const WeeklyPlanPage: React.FC = () => {
             <h2 className="text-2xl font-bold tracking-tight text-on-surface">Commitment Reviews</h2>
             <p className="text-sm text-secondary">Each item keeps its original planning context so the review stays aligned with the rest of the workflow.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            <a href={api.getExportUrl(currentPlan.id, 'csv')} target="_blank" rel="noopener noreferrer"
+              className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">download</span>
+              Export CSV
+            </a>
+            <a href={api.getExportUrl(currentPlan.id, 'pdf')} target="_blank" rel="noopener noreferrer"
+              className="px-5 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+              Export PDF
+            </a>
             {isReconciling && allDone && (
               <button onClick={() => handleTransition('RECONCILE')} disabled={transitioning}
                 className="px-6 py-3 bg-tertiary text-on-tertiary rounded-full font-bold shadow-lg shadow-tertiary/20 disabled:opacity-40 transition-all flex items-center justify-center gap-2">

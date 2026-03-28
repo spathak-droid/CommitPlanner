@@ -13,11 +13,14 @@ import TeamWorkspacePage from './pages/TeamWorkspacePage';
 import TeamAlignmentPage from './pages/TeamAlignmentPage';
 import RcdoHierarchyPage from './pages/RcdoHierarchyPage';
 import SettingsPage from './pages/SettingsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import CapacityPlanningPage from './pages/CapacityPlanningPage';
+import CalendarViewPage from './pages/CalendarViewPage';
 import type { AppProps, UserRole } from './types';
 
 const roleViews: Record<UserRole, View[]> = {
-  MANAGER: ['dashboard', 'team', 'alignment', 'rcdo', 'settings'],
-  IC: ['commitments', 'rcdo', 'settings'],
+  MANAGER: ['dashboard', 'team', 'alignment', 'analytics', 'capacity', 'calendar', 'rcdo', 'settings'],
+  IC: ['commitments', 'calendar', 'rcdo', 'settings'],
 };
 
 function getDefaultView(role: UserRole): View {
@@ -107,6 +110,12 @@ const App: React.FC<AppProps> = ({ userId, role, apiBaseUrl, authToken }) => {
         return <TeamAlignmentPage />;
       case 'commitments':
         return <WeeklyPlanPage />;
+      case 'analytics':
+        return <AnalyticsPage />;
+      case 'capacity':
+        return <CapacityPlanningPage />;
+      case 'calendar':
+        return <CalendarViewPage />;
       case 'rcdo':
         return <RcdoHierarchyPage />;
       case 'settings':

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import type { UserRole } from '../types';
 
-type View = 'dashboard' | 'team' | 'commitments' | 'alignment' | 'rcdo' | 'settings';
+type View = 'dashboard' | 'team' | 'commitments' | 'alignment' | 'rcdo' | 'settings' | 'analytics' | 'capacity' | 'calendar';
 
 interface Props {
   activeView: View;
@@ -17,10 +17,14 @@ const navItemsByRole: Record<UserRole, { id: View; label: string; icon: string }
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'team', label: 'Team', icon: 'groups' },
     { id: 'alignment', label: 'Team Alignment', icon: 'group' },
+    { id: 'analytics', label: 'Analytics', icon: 'analytics' },
+    { id: 'capacity', label: 'Capacity', icon: 'group_work' },
+    { id: 'calendar', label: 'Calendar', icon: 'calendar_month' },
     { id: 'rcdo', label: 'RCDO Hierarchy', icon: 'account_tree' },
   ],
   IC: [
     { id: 'commitments', label: 'Weekly Commitments', icon: 'event_available' },
+    { id: 'calendar', label: 'Calendar', icon: 'calendar_month' },
     { id: 'rcdo', label: 'RCDO Hierarchy', icon: 'account_tree' },
   ],
 };

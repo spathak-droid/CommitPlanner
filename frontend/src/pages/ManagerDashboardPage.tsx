@@ -430,10 +430,11 @@ const ManagerDashboardPage: React.FC = () => {
             <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)}
               className="px-4 py-3 bg-white border border-outline-variant/20 rounded-full font-semibold text-sm text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
-          <button className="px-6 py-3 bg-primary-container text-on-primary-container rounded-full font-bold text-sm flex items-center gap-2 shadow-sm hover:opacity-90 transition-all">
-            <span className="material-symbols-outlined text-lg">ios_share</span>
-            Export Report
-          </button>
+          <a href={api.getTeamExportUrl(weekStart, 'csv')} target="_blank" rel="noopener noreferrer"
+            className="px-6 py-3 bg-primary-container text-on-primary-container rounded-full font-bold text-sm flex items-center gap-2 shadow-sm hover:opacity-90 transition-all">
+            <span className="material-symbols-outlined text-lg">download</span>
+            Export Team CSV
+          </a>
         </div>
       </div>
 
