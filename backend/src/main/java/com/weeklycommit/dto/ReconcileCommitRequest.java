@@ -3,11 +3,13 @@ package com.weeklycommit.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record ReconcileCommitRequest(
-    @NotNull BigDecimal actualHours,
+    @NotNull @Positive BigDecimal actualHours,
     @NotNull @Min(0) @Max(100) Integer completionPct,
-    String reconciliationNotes,
+    @Size(max = 2000) String reconciliationNotes,
     boolean carryForward
 ) {}
