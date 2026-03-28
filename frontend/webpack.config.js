@@ -52,6 +52,7 @@ module.exports = (env, argv) => {
         shared: {
           react: { singleton: true, requiredVersion: '^18.3.0' },
           'react-dom': { singleton: true, requiredVersion: '^18.3.0' },
+          zustand: { singleton: true, requiredVersion: '^4.5.0' },
         },
       }),
       new HtmlWebpackPlugin({
