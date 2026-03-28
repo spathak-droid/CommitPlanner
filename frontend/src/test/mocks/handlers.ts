@@ -138,4 +138,19 @@ export const handlers = [
   http.delete(`${BASE}/notifications/:id`, () => new HttpResponse(null, { status: 204 })),
   http.get(`${BASE}/ai/status`, () => HttpResponse.json({ enabled: false, model: null })),
   http.post(`${BASE}/auth/logout`, () => new HttpResponse(null, { status: 200 })),
+  // Comments
+  http.get(`${BASE}/commits/:commitId/comments`, () => HttpResponse.json([])),
+  http.post(`${BASE}/commits/:commitId/comments`, () =>
+    HttpResponse.json({
+      id: 'comment-1',
+      commitId: 'commit-1',
+      authorUserId: 'ic1',
+      authorName: 'IC User 1',
+      body: 'test',
+      parentCommentId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+  ),
+  http.delete(`${BASE}/comments/:id`, () => new HttpResponse(null, { status: 204 })),
 ];

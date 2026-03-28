@@ -608,61 +608,64 @@ const WeeklyPlanPage: React.FC = () => {
           return (
             <div key={priority} className="space-y-2">
               {commits.map((commit) => (
-                editingCommitId === commit.id ? (
-                  <div key={commit.id} className="rounded-[1rem] ring-2 ring-tertiary/30">
-                    <CommitForm
-                      onSubmit={(data) => handleEditCommit(commit.id, data)}
-                      onCancel={() => setEditingCommitId(null)}
-                      initialValues={{
-                        title: commit.title,
-                        description: commit.description || '',
-                        chessPriority: commit.chessPriority,
-                        outcomeId: commit.outcomeId,
-                        plannedHours: commit.plannedHours,
-                      }}
-                    />
-                  </div>
-                ) : (
-                <div key={commit.id}
-                  onClick={() => isDraft && setEditingCommitId(commit.id)}
-                  className={`bg-surface-lowest hover:bg-white transition-all group rounded-[1rem] p-5 shadow-sm ring-1 ring-outline-variant/10 ${isDraft ? 'cursor-pointer' : ''}`}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-on-surface">{commit.title}</h4>
-                        <ChessBadge priority={commit.chessPriority} />
-                        {commit.carriedFromWeek && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-tertiary-container px-2.5 py-0.5 text-[10px] font-bold text-on-tertiary-container">
-                            <span className="material-symbols-outlined text-xs">redo</span>
-                            CF from {commit.carriedFromWeek}
-                          </span>
-                        )}
-                        {isDraft && (
-                          <span className="opacity-0 group-hover:opacity-100 text-[10px] text-secondary transition-all">click to edit</span>
-                        )}
-                      </div>
-                      {commit.description && <p className="text-sm text-secondary mb-2">{commit.description}</p>}
-                      <div className="flex items-center gap-2 text-xs text-secondary">
-                        <span className="material-symbols-outlined text-sm text-tertiary">account_tree</span>
-                        <span className="text-tertiary font-medium">{commit.rallyCryName}</span>
-                        <span>→</span>
-                        <span>{commit.definingObjectiveName}</span>
-                        <span>→</span>
-                        <span className="font-medium text-on-surface">{commit.outcomeName}</span>
-                        {commit.plannedHours && (
-                          <span className="ml-auto px-3 py-1 bg-surface-container-low rounded-full font-semibold">{commit.plannedHours}h</span>
-                        )}
-                      </div>
+                <div key={commit.id}>
+                  {editingCommitId === commit.id ? (
+                    <div className="rounded-[1rem] ring-2 ring-tertiary/30">
+                      <CommitForm
+                        onSubmit={(data) => handleEditCommit(commit.id, data)}
+                        onCancel={() => setEditingCommitId(null)}
+                        initialValues={{
+                          title: commit.title,
+                          description: commit.description || '',
+                          chessPriority: commit.chessPriority,
+                          outcomeId: commit.outcomeId,
+                          plannedHours: commit.plannedHours,
+                        }}
+                      />
                     </div>
-                    {isDraft && (
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCommit(commit.id); }}
-                        className="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-error-container text-secondary hover:text-error transition-all ml-3">
-                        <span className="material-symbols-outlined text-lg">close</span>
-                      </button>
-                    )}
+                  ) : (
+                  <div
+                    onClick={() => isDraft && setEditingCommitId(commit.id)}
+                    className={`bg-surface-lowest hover:bg-white transition-all group rounded-[1rem] p-5 shadow-sm ring-1 ring-outline-variant/10 ${isDraft ? 'cursor-pointer' : ''}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-on-surface">{commit.title}</h4>
+                          <ChessBadge priority={commit.chessPriority} />
+                          {commit.carriedFromWeek && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-tertiary-container px-2.5 py-0.5 text-[10px] font-bold text-on-tertiary-container">
+                              <span className="material-symbols-outlined text-xs">redo</span>
+                              CF from {commit.carriedFromWeek}
+                            </span>
+                          )}
+                          {isDraft && (
+                            <span className="opacity-0 group-hover:opacity-100 text-[10px] text-secondary transition-all">click to edit</span>
+                          )}
+                        </div>
+                        {commit.description && <p className="text-sm text-secondary mb-2">{commit.description}</p>}
+                        <div className="flex items-center gap-2 text-xs text-secondary">
+                          <span className="material-symbols-outlined text-sm text-tertiary">account_tree</span>
+                          <span className="text-tertiary font-medium">{commit.rallyCryName}</span>
+                          <span>→</span>
+                          <span>{commit.definingObjectiveName}</span>
+                          <span>→</span>
+                          <span className="font-medium text-on-surface">{commit.outcomeName}</span>
+                          {commit.plannedHours && (
+                            <span className="ml-auto px-3 py-1 bg-surface-container-low rounded-full font-semibold">{commit.plannedHours}h</span>
+                          )}
+                        </div>
+                      </div>
+                      {isDraft && (
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteCommit(commit.id); }}
+                          className="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-error-container text-secondary hover:text-error transition-all ml-3">
+                          <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  )}
+                  <CommitComments commitId={commit.id} />
                 </div>
-                )
               ))}
             </div>
           );
