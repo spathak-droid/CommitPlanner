@@ -1,6 +1,7 @@
 package com.weeklycommit.controller;
 
 import com.weeklycommit.dto.*;
+import com.weeklycommit.dto.analytics.CalendarEntry;
 import com.weeklycommit.service.WeeklyPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -8,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +47,12 @@ public class WeeklyPlanController {
     @GetMapping("/weekly-plans")
     public List<WeeklyPlanResponse> getUserPlans() {
         return planService.getUserPlans();
+    }
+
+    @Operation(summary = "Calendar view of plans in date range")
+    @GetMapping("/weekly-plans/calendar")
+    public List<CalendarEntry> getCalendar(@RequestParam LocalDate from, @RequestParam LocalDate to) {
+        return planService.getCalendarEntries(from, to);
     }
 
     // Commits

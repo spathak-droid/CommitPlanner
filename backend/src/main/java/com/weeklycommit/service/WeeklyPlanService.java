@@ -1,10 +1,12 @@
 package com.weeklycommit.service;
 
 import com.weeklycommit.dto.*;
+import com.weeklycommit.dto.analytics.CalendarEntry;
 import com.weeklycommit.entity.WeeklyCommit;
 import com.weeklycommit.entity.WeeklyPlan;
 import com.weeklycommit.enums.ChessPriority;
 import com.weeklycommit.enums.PlanStatus;
+import com.weeklycommit.enums.UserRole;
 import com.weeklycommit.repository.AppUserRepository;
 import com.weeklycommit.repository.ManagerAssignmentRepository;
 import com.weeklycommit.repository.ManagerReviewRepository;
@@ -19,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -323,6 +326,39 @@ public class WeeklyPlanService {
         }
 
         planRepo.save(newPlan);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CalendarEntry> getCalendarEntries(LocalDate from, LocalDate to) {
+        var userId = authorizationService.currentUserId();
+        var user = userRepo.findByUserIdAndActiveTrue(userId).orElse(null);
+        List<WeeklyPlan> plans;
+
+        if (user != null && user.getRole() == UserRole.MANAGER) {
+            // Manager: get team plans
+            var memberIds = assignmentRepo.findByManagerUserId(userId).stream()
+                .map(a -> a.getMember().getUserId())
+                .toList();
+            var allIds = new ArrayList<>(memberIds);
+            allIds.add(userId);
+            plans = allIds.isEmpty() ? List.of() : planRepo.findByUserIdInAndWeekStartDateBetween(allIds, from, to);
+        } else {
+            // IC: get own plans
+            plans = planRepo.findByUserIdAndWeekStartDateBetween(userId, from, to);
+        }
+
+        return plans.stream()
+            .map(p -> {
+                var commits = p.getCommits();
+                double avgCompletion = commits.stream()
+                    .map(WeeklyCommit::getCompletionPct)
+                    .filter(pct -> pct != null)
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(0.0);
+                return new CalendarEntry(p.getId(), p.getWeekStartDate(), p.getStatus(), commits.size(), avgCompletion);
+            })
+            .toList();
     }
 
     private WeeklyPlan findPlan(UUID planId) {
