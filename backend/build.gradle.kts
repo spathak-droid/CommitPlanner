@@ -23,6 +23,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     runtimeOnly("org.postgresql:postgresql")
 
+    implementation("org.springframework.security:spring-security-crypto:6.2.4")
     implementation("com.anthropic:anthropic-java:1.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
