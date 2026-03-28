@@ -19,6 +19,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -31,6 +32,7 @@ public class WeeklyPlanService {
     private final AppUserRepository userRepo;
     private final ManagerReviewRepository reviewRepo;
     private final AuthorizationService authorizationService;
+    private final AuditService auditService;
 
     public WeeklyPlanService(
         WeeklyPlanRepository planRepo,
@@ -38,7 +40,8 @@ public class WeeklyPlanService {
         OutcomeRepository outcomeRepo,
         AppUserRepository userRepo,
         ManagerReviewRepository reviewRepo,
-        AuthorizationService authorizationService
+        AuthorizationService authorizationService,
+        AuditService auditService
     ) {
         this.planRepo = planRepo;
         this.commitRepo = commitRepo;
@@ -46,6 +49,7 @@ public class WeeklyPlanService {
         this.userRepo = userRepo;
         this.reviewRepo = reviewRepo;
         this.authorizationService = authorizationService;
+        this.auditService = auditService;
     }
 
     public WeeklyPlanResponse createPlan(CreateWeeklyPlanRequest req) {
@@ -64,6 +68,7 @@ public class WeeklyPlanService {
         plan.setUserId(userId);
         plan.setWeekStartDate(weekStart);
         plan = planRepo.save(plan);
+        auditService.log("WEEKLY_PLAN", plan.getId(), "CREATE", Map.of("weekStartDate", plan.getWeekStartDate().toString(), "userId", plan.getUserId()));
         return toResponse(plan);
     }
 
@@ -117,6 +122,11 @@ public class WeeklyPlanService {
 
         plan.getCommits().add(commit);
         plan = planRepo.save(plan);
+        var savedCommit = plan.getCommits().stream()
+            .filter(c -> c.getTitle().equals(req.title()))
+            .reduce((first, second) -> second)
+            .orElse(commit);
+        auditService.log("COMMIT", savedCommit.getId(), "CREATE", Map.of("title", savedCommit.getTitle()));
         return toResponse(plan);
     }
 
@@ -161,6 +171,7 @@ public class WeeklyPlanService {
             throw new IllegalStateException("Can only delete commits from DRAFT plans");
         }
 
+        auditService.log("COMMIT", commit.getId(), "DELETE", Map.of("title", commit.getTitle()));
         commitRepo.delete(commit);
     }
 
@@ -179,6 +190,7 @@ public class WeeklyPlanService {
         commit.setReconciliationNotes(req.reconciliationNotes());
         commit.setCarryForward(req.carryForward());
         commitRepo.save(commit);
+        auditService.log("COMMIT", commit.getId(), "RECONCILE", Map.of("actualHours", req.actualHours().toString(), "completionPct", req.completionPct().toString()));
 
         return toResponse(commit.getWeeklyPlan());
     }
@@ -187,6 +199,7 @@ public class WeeklyPlanService {
     public WeeklyPlanResponse transition(UUID planId, String action) {
         var plan = findPlan(planId);
         authorizationService.requireCanAccessUser(plan.getUserId());
+        var oldStatus = plan.getStatus().name();
         var targetStatus = switch (action.toUpperCase()) {
             case "LOCK" -> PlanStatus.LOCKED;
             case "UNLOCK" -> {
@@ -239,6 +252,7 @@ public class WeeklyPlanService {
         }
 
         plan = planRepo.save(plan);
+        auditService.log("WEEKLY_PLAN", plan.getId(), "TRANSITION", Map.of("from", oldStatus, "to", plan.getStatus().name()));
 
         // Handle carry forward: create next week's plan with incomplete items
         if (targetStatus == PlanStatus.CARRY_FORWARD) {
