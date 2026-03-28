@@ -24,7 +24,7 @@ const roleContent: Record<UserRole, {
     glow: 'bg-primary/20',
     panel: 'from-primary-container/35 via-white to-surface-lowest',
     icon: 'insights',
-    password: 'ManagerPass123!',
+    password: 'password123',
     presets: ['manager-1', 'director-ops', 'lead-product'],
     metrics: [
       { label: 'Views', value: 'Dashboard' },
@@ -39,7 +39,7 @@ const roleContent: Record<UserRole, {
     glow: 'bg-tertiary/20',
     panel: 'from-tertiary-container/35 via-white to-surface-lowest',
     icon: 'event_available',
-    password: 'ContributorPass123!',
+    password: 'password123',
     presets: ['user-1', 'ic-product', 'ic-design'],
     metrics: [
       { label: 'Views', value: 'Commitments' },
