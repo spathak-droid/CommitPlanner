@@ -30,6 +30,8 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
     implementation("com.bucket4j:bucket4j-core:8.10.1")
     implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("com.opencsv:opencsv:5.9")
+    implementation("org.apache.pdfbox:pdfbox:3.0.2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
