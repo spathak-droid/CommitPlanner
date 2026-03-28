@@ -148,9 +148,9 @@ describe('useStore', () => {
 
       const state = useStore.getState();
       expect(state.rcdoTree).toHaveLength(1);
-      expect(state.rcdoTree[0].name).toBe('Rally Cry 1');
-      expect(state.rcdoTree[0].definingObjectives).toHaveLength(1);
-      expect(state.rcdoTree[0].definingObjectives[0].outcomes).toHaveLength(2);
+      expect(state.rcdoTree[0]!.name).toBe('Rally Cry 1');
+      expect(state.rcdoTree[0]!.definingObjectives).toHaveLength(1);
+      expect(state.rcdoTree[0]!.definingObjectives[0]!.outcomes).toHaveLength(2);
       expect(state.loadingRcdo).toBe(false);
     });
   });

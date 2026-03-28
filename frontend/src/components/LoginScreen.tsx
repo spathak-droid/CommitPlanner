@@ -258,14 +258,25 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
                 })}
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r ${current.accent} px-8 py-4 text-sm font-black text-white shadow-[0px_20px_38px_rgba(27,27,30,0.18)] transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50`}
-              >
-                <span className="material-symbols-outlined text-lg">{submitting ? 'hourglass_top' : 'login'}</span>
-                {submitting ? 'Signing In...' : `Enter as ${current.label}`}
-              </button>
+              <div className="mt-auto flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={`inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r ${current.accent} px-8 py-4 text-sm font-black text-white shadow-[0px_20px_38px_rgba(27,27,30,0.18)] transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50`}
+                >
+                  <span className="material-symbols-outlined text-lg">{submitting ? 'hourglass_top' : 'login'}</span>
+                  {submitting ? 'Signing In...' : `Enter as ${current.label}`}
+                </button>
+                <a
+                  href={`${((window as any).__API_URL__ || 'http://localhost:8080/api').replace(/\/api\/?$/, '')}/swagger-ui/index.html`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-outline-variant/20 bg-white/70 px-6 py-3 text-xs font-bold text-secondary transition-all hover:bg-white hover:text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-base">api</span>
+                  API Docs (Swagger)
+                </a>
+              </div>
             </form>
           </div>
         </section>

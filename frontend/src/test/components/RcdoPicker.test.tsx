@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
+
 import { RcdoPicker } from '../../components/RcdoPicker';
 import { useStore } from '../../store/useStore';
 import { mockRcdoTree } from '../mocks/handlers';
