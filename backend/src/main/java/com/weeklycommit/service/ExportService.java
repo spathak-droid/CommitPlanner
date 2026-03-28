@@ -78,68 +78,130 @@ public class ExportService {
             .orElse(plan.getUserId());
 
         try (var doc = new PDDocument()) {
-            var page = new PDPage(PDRectangle.LETTER);
-            doc.addPage(page);
+            var boldFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
+            var regularFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
 
-            try (var content = new PDPageContentStream(doc, page)) {
-                var boldFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-                var regularFont = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-                var pageWidth = page.getMediaBox().getWidth();
-                var margin = 50f;
-                var usableWidth = pageWidth - 2 * margin;
-                var yPos = page.getMediaBox().getHeight() - margin;
+            // Use landscape for more horizontal room
+            var landscape = new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth());
+            var margin = 40f;
+            var usableWidth = landscape.getWidth() - 2 * margin;
+            var rowHeight = 22f;
+            var headerRowHeight = 26f;
+            var fontSize = 9f;
+            var headerFontSize = 9f;
 
-                // Title
-                content.beginText();
-                content.setFont(boldFont, 14);
-                content.newLineAtOffset(margin, yPos);
-                content.showText("Weekly Plan — " + userName + " — Week of " + plan.getWeekStartDate());
-                content.endText();
-                yPos -= 20;
-
-                // Status line
-                content.beginText();
-                content.setFont(regularFont, 11);
-                content.newLineAtOffset(margin, yPos);
-                content.showText("Status: " + plan.getStatus().name());
-                content.endText();
-                yPos -= 25;
-
-                // Column headers
-                yPos = writePdfRow(content, boldFont, 10, margin, yPos, usableWidth,
-                    "Title", "Priority", "Outcome", "Planned Hrs", "Actual Hrs", "Completion %", "Carry Fwd");
-                yPos -= 4;
-
-                // Separator line
-                content.moveTo(margin, yPos);
-                content.lineTo(margin + usableWidth, yPos);
-                content.stroke();
-                yPos -= 6;
-
-                // Commit rows
-                for (var commit : plan.getCommits()) {
-                    if (yPos < margin + 30) {
-                        // Start a new page if we're near the bottom
-                        content.close();
-                        var newPage = new PDPage(PDRectangle.LETTER);
-                        doc.addPage(newPage);
-                        // Note: we'd need a new content stream here for multi-page;
-                        // for simplicity we stop at one page (typical plans are short)
-                        break;
-                    }
-                    var outcomeName = commit.getOutcome() != null ? commit.getOutcome().getName() : "";
-                    yPos = writePdfRow(content, regularFont, 9, margin, yPos, usableWidth,
-                        truncate(commit.getTitle(), 30),
-                        commit.getChessPriority().name(),
-                        truncate(outcomeName, 20),
-                        commit.getPlannedHours() != null ? commit.getPlannedHours().toPlainString() : "",
-                        commit.getActualHours() != null ? commit.getActualHours().toPlainString() : "",
-                        commit.getCompletionPct() != null ? commit.getCompletionPct() + "%" : "",
-                        commit.isCarryForward() ? "Yes" : "No"
-                    );
-                    yPos -= 3;
-                }
+            // Column definitions: name, proportional width fraction
+            String[] headers = {"Title", "Priority", "Outcome", "Planned Hrs", "Actual Hrs", "Completion", "Notes", "Carry Fwd"};
+            float[] colFractions = {0.22f, 0.08f, 0.18f, 0.08f, 0.08f, 0.08f, 0.20f, 0.08f};
+            float[] colWidths = new float[colFractions.length];
+            float[] colX = new float[colFractions.length];
+            for (int i = 0; i < colFractions.length; i++) {
+                colWidths[i] = usableWidth * colFractions[i];
+                colX[i] = margin + (i == 0 ? 0 : colX[i - 1] - margin + colWidths[i - 1]);
             }
+
+            var page = new PDPage(landscape);
+            doc.addPage(page);
+            var content = new PDPageContentStream(doc, page);
+            var yPos = landscape.getHeight() - margin;
+
+            // Title
+            content.beginText();
+            content.setFont(boldFont, 16);
+            content.newLineAtOffset(margin, yPos);
+            content.showText("Weekly Plan - " + userName);
+            content.endText();
+            yPos -= 20;
+
+            // Subtitle
+            content.beginText();
+            content.setFont(regularFont, 11);
+            content.newLineAtOffset(margin, yPos);
+            content.showText("Week of " + plan.getWeekStartDate() + "  |  Status: " + plan.getStatus().name());
+            content.endText();
+            yPos -= 30;
+
+            // Table header background
+            content.setNonStrokingColor(0.15f, 0.15f, 0.2f);
+            content.addRect(margin, yPos - headerRowHeight + 4, usableWidth, headerRowHeight);
+            content.fill();
+
+            // Table header text
+            content.setNonStrokingColor(1f, 1f, 1f);
+            content.setFont(boldFont, headerFontSize);
+            for (int i = 0; i < headers.length; i++) {
+                content.beginText();
+                content.newLineAtOffset(colX[i] + 4, yPos - headerRowHeight + 10);
+                content.showText(headers[i]);
+                content.endText();
+            }
+            yPos -= headerRowHeight;
+
+            // Data rows
+            int rowIndex = 0;
+            for (var commit : plan.getCommits()) {
+                if (yPos - rowHeight < margin) {
+                    content.close();
+                    page = new PDPage(landscape);
+                    doc.addPage(page);
+                    content = new PDPageContentStream(doc, page);
+                    yPos = landscape.getHeight() - margin;
+                }
+
+                // Alternating row background
+                if (rowIndex % 2 == 0) {
+                    content.setNonStrokingColor(0.96f, 0.96f, 0.97f);
+                } else {
+                    content.setNonStrokingColor(1f, 1f, 1f);
+                }
+                content.addRect(margin, yPos - rowHeight + 4, usableWidth, rowHeight);
+                content.fill();
+
+                // Row text
+                content.setNonStrokingColor(0.1f, 0.1f, 0.1f);
+                content.setFont(regularFont, fontSize);
+                var outcomeName = commit.getOutcome() != null ? commit.getOutcome().getName() : "";
+                String[] cells = {
+                    commit.getTitle(),
+                    commit.getChessPriority().name(),
+                    outcomeName,
+                    commit.getPlannedHours() != null ? commit.getPlannedHours().toPlainString() : "-",
+                    commit.getActualHours() != null ? commit.getActualHours().toPlainString() : "-",
+                    commit.getCompletionPct() != null ? commit.getCompletionPct() + "%" : "-",
+                    commit.getReconciliationNotes() != null ? commit.getReconciliationNotes() : "",
+                    commit.isCarryForward() ? "Yes" : "No"
+                };
+                var cellPad = 8f;
+                for (int i = 0; i < cells.length; i++) {
+                    var fitted = truncateToFit(cells[i], regularFont, fontSize, colWidths[i] - cellPad);
+                    content.beginText();
+                    content.newLineAtOffset(colX[i] + 4, yPos - rowHeight + 10);
+                    content.showText(fitted);
+                    content.endText();
+                }
+
+                yPos -= rowHeight;
+                rowIndex++;
+            }
+
+            // Bottom border line
+            content.setStrokingColor(0.8f, 0.8f, 0.8f);
+            content.setLineWidth(0.5f);
+            content.moveTo(margin, yPos + 4);
+            content.lineTo(margin + usableWidth, yPos + 4);
+            content.stroke();
+
+            // Summary footer
+            yPos -= 20;
+            content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
+            content.beginText();
+            content.setFont(regularFont, 9);
+            content.newLineAtOffset(margin, yPos);
+            content.showText("Total commitments: " + plan.getCommits().size()
+                + "  |  Generated: " + LocalDate.now());
+            content.endText();
+
+            content.close();
 
             var out = new ByteArrayOutputStream();
             doc.save(out);
@@ -195,33 +257,22 @@ public class ExportService {
         };
     }
 
-    /**
-     * Writes a row of 7 columns evenly spaced across usableWidth and returns the new yPos.
-     */
-    private float writePdfRow(
-        PDPageContentStream content,
-        PDType1Font font,
-        float fontSize,
-        float marginLeft,
-        float yPos,
-        float usableWidth,
-        String col1, String col2, String col3,
-        String col4, String col5, String col6, String col7
-    ) throws IOException {
-        var colWidth = usableWidth / 7f;
-        String[] cols = {col1, col2, col3, col4, col5, col6, col7};
-        content.setFont(font, fontSize);
-        for (int i = 0; i < cols.length; i++) {
-            content.beginText();
-            content.newLineAtOffset(marginLeft + i * colWidth, yPos);
-            content.showText(cols[i] != null ? cols[i] : "");
-            content.endText();
+    private String truncateToFit(String value, PDType1Font font, float fontSize, float maxWidth) {
+        if (value == null || value.isEmpty()) return "";
+        try {
+            float fullWidth = font.getStringWidth(value) / 1000f * fontSize;
+            if (fullWidth <= maxWidth) return value;
+            String ellipsis = "..";
+            float ellipsisWidth = font.getStringWidth(ellipsis) / 1000f * fontSize;
+            for (int i = value.length() - 1; i > 0; i--) {
+                float w = font.getStringWidth(value.substring(0, i)) / 1000f * fontSize;
+                if (w + ellipsisWidth <= maxWidth) {
+                    return value.substring(0, i) + ellipsis;
+                }
+            }
+            return ellipsis;
+        } catch (IOException e) {
+            return value.length() > 10 ? value.substring(0, 8) + ".." : value;
         }
-        return yPos - (fontSize + 4);
-    }
-
-    private String truncate(String value, int maxLen) {
-        if (value == null) return "";
-        return value.length() <= maxLen ? value : value.substring(0, maxLen - 1) + "…";
     }
 }

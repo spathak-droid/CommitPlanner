@@ -24,3 +24,12 @@ Thumbs.db
 .env
 .env.local
 application-local.yml
+
+# Framework artifacts
+.agents/
+.claude/skills/
+docs/superpowers/
+
+# Temp
+/tmp/
+*.tmp

@@ -28,7 +28,6 @@ const tabsByRole: Record<UserRole, { id: View; label: string }[]> = {
 
 export const TopNav: React.FC<Props> = ({ activeView, onViewChange, userId, fullName, role }) => {
   const tabs = tabsByRole[role];
-  const searchPlaceholder = role === 'MANAGER' ? 'Search team members...' : 'Search commitments...';
   const accentText = role === 'MANAGER' ? 'text-primary' : 'text-tertiary';
   const accentHover = role === 'MANAGER' ? 'hover:text-primary' : 'hover:text-tertiary';
   const avatarClass = role === 'MANAGER'
@@ -59,15 +58,6 @@ export const TopNav: React.FC<Props> = ({ activeView, onViewChange, userId, full
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative hidden lg:flex items-center bg-surface-container rounded-full px-4 py-2 w-64">
-          <span className="material-symbols-outlined text-secondary text-sm">search</span>
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            className="bg-transparent border-none focus:ring-0 focus:outline-none text-xs w-full ml-2"
-          />
-        </div>
-
         <NotificationBell />
 
         <div className="hidden md:block text-right">

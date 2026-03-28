@@ -335,15 +335,13 @@ public class WeeklyPlanService {
         List<WeeklyPlan> plans;
 
         if (user != null && user.getRole() == UserRole.MANAGER) {
-            // Manager: get team plans
+            // Manager sees all contributors
             var memberIds = assignmentRepo.findByManagerUserId(userId).stream()
                 .map(a -> a.getMember().getUserId())
                 .toList();
-            var allIds = new ArrayList<>(memberIds);
-            allIds.add(userId);
-            plans = allIds.isEmpty() ? List.of() : planRepo.findByUserIdInAndWeekStartDateBetween(allIds, from, to);
+            plans = memberIds.isEmpty() ? List.of() : planRepo.findByUserIdInAndWeekStartDateBetween(memberIds, from, to);
         } else {
-            // IC: get own plans
+            // IC sees own plans
             plans = planRepo.findByUserIdAndWeekStartDateBetween(userId, from, to);
         }
 
@@ -356,7 +354,10 @@ public class WeeklyPlanService {
                     .mapToInt(Integer::intValue)
                     .average()
                     .orElse(0.0);
-                return new CalendarEntry(p.getId(), p.getWeekStartDate(), p.getStatus(), commits.size(), avgCompletion);
+                var memberName = userRepo.findByUserIdAndActiveTrue(p.getUserId())
+                    .map(u -> u.getFullName())
+                    .orElse(p.getUserId());
+                return new CalendarEntry(p.getId(), p.getWeekStartDate(), p.getStatus(), commits.size(), avgCompletion, p.getUserId(), memberName);
             })
             .toList();
     }

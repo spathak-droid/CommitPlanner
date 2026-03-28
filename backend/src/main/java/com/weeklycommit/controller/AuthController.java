@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${COOKIE_SECURE:false}")
+    private boolean cookieSecure;
 
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -27,7 +31,7 @@ public class AuthController {
         AuthResponse authResponse = authService.login(request);
         Cookie cookie = new Cookie("auth_token", authResponse.token());
         cookie.setHttpOnly(true);
-        cookie.setSecure(false); // Set to true in production with HTTPS
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/api");
         cookie.setMaxAge(12 * 60 * 60); // 12 hours
         cookie.setAttribute("SameSite", "Strict");
@@ -40,7 +44,7 @@ public class AuthController {
     public void logout(HttpServletResponse response) {
         Cookie cookie = new Cookie("auth_token", "");
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/api");
         cookie.setMaxAge(0);
         cookie.setAttribute("SameSite", "Strict");
