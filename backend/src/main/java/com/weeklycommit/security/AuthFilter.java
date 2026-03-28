@@ -28,7 +28,9 @@ public class AuthFilter extends OncePerRequestFilter {
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
             || !path.startsWith("/api")
             || path.equals("/api/health")
-            || path.equals("/api/auth/login");
+            || path.equals("/api/auth/login")
+            || path.startsWith("/api-docs")
+            || path.startsWith("/swagger-ui");
     }
 
     @Override

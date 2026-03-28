@@ -23,3 +23,9 @@ anthropic:
   base-url: ${ANTHROPIC_BASE_URL:}
   model: ${ANTHROPIC_MODEL:claude-sonnet-4-20250514}
   max-tokens: 1024
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
