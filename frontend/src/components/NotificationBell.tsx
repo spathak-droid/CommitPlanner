@@ -18,10 +18,47 @@ export const NotificationBell: React.FC = () => {
     } catch { /* ignore if not authenticated yet */ }
   }, []);
 
+  // Poll unread count every 15s (lightweight)
   useEffect(() => {
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    const interval = setInterval(fetchCount, 15000);
     return () => clearInterval(interval);
+  }, [fetchCount]);
+
+  // SSE: attempt to connect; fall back to polling on error
+  useEffect(() => {
+    const baseUrl = (window as any).__API_URL__ || 'http://localhost:8080/api';
+    let es: EventSource | null = null;
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+
+    try {
+      es = new EventSource(`${baseUrl}/notifications/stream`, { withCredentials: true });
+
+      es.addEventListener('notification', (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data) as NotificationItem;
+          // Increment unread count
+          setUnreadCount((prev) => prev + 1);
+          // Prepend to notifications list if panel is open
+          setNotifications((prev) => [data, ...prev]);
+        } catch { /* ignore parse errors */ }
+      });
+
+      es.onerror = () => {
+        // SSE failed — close and fall back to polling every 15s
+        es?.close();
+        es = null;
+        fallbackInterval = setInterval(fetchCount, 15000);
+      };
+    } catch {
+      // EventSource not supported or failed to create
+      fallbackInterval = setInterval(fetchCount, 15000);
+    }
+
+    return () => {
+      es?.close();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+    };
   }, [fetchCount]);
 
   useEffect(() => {
@@ -35,6 +72,7 @@ export const NotificationBell: React.FC = () => {
     setOpen(true);
     setLoading(true);
     try {
+      // Fetch fresh notifications on panel open
       const items = await api.fetchNotifications();
       setNotifications(items);
       if (unreadCount > 0) {
@@ -49,6 +87,13 @@ export const NotificationBell: React.FC = () => {
         gsap.fromTo(panelRef.current, { opacity: 0, y: -10, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'power3.out' });
       }
     });
+  };
+
+  const handleDismiss = async (id: string) => {
+    try {
+      await api.deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch { /* ignore */ }
   };
 
   const timeAgo = (iso: string): string => {
@@ -121,6 +166,13 @@ export const NotificationBell: React.FC = () => {
                       {n.message && <p className="text-xs text-secondary mt-1 leading-relaxed">{n.message}</p>}
                       <p className="text-[10px] text-secondary mt-1.5 font-semibold">{timeAgo(n.createdAt)}</p>
                     </div>
+                    <button
+                      onClick={() => handleDismiss(n.id)}
+                      className="ml-1 p-1 rounded-full hover:bg-surface-container transition-colors text-secondary self-start"
+                      aria-label="Dismiss notification"
+                    >
+                      <span className="material-symbols-outlined text-base">close</span>
+                    </button>
                   </div>
                 </div>
               ))}

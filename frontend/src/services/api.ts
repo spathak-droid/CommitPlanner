@@ -221,6 +221,10 @@ export const markNotificationRead = (id: string): Promise<void> => request(`/not
 export const sendNudge = (userIds: string[], weekLabel: string): Promise<{ message: string }> =>
   request('/notifications/nudge', { method: 'POST', body: JSON.stringify({ userIds, weekLabel }) });
 
+export async function deleteNotification(id: string): Promise<void> {
+  await request(`/notifications/${id}`, { method: 'DELETE' });
+}
+
 // AI
 export const getAiStatus = (): Promise<AiStatus> => request('/ai/status');
 

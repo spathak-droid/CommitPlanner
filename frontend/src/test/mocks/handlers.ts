@@ -135,6 +135,7 @@ export const handlers = [
   http.post(`${BASE}/manager/reviews`, () => HttpResponse.json({ id: 'review-1' })),
   http.get(`${BASE}/notifications`, () => HttpResponse.json([])),
   http.get(`${BASE}/notifications/unread-count`, () => HttpResponse.json({ count: 0 })),
+  http.delete(`${BASE}/notifications/:id`, () => new HttpResponse(null, { status: 204 })),
   http.get(`${BASE}/ai/status`, () => HttpResponse.json({ enabled: false, model: null })),
   http.post(`${BASE}/auth/logout`, () => new HttpResponse(null, { status: 200 })),
 ];
