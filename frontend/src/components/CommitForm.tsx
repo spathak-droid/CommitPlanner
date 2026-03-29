@@ -36,6 +36,7 @@ export const CommitForm: React.FC<Props> = ({ onSubmit, onCancel, initialValues 
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiDismissed, setAiDismissed] = useState(false);
   const [suggestedOutcomeId, setSuggestedOutcomeId] = useState<string | null>(null);
+  const [descLoading, setDescLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Debounced AI matching on title change
@@ -82,6 +83,22 @@ export const CommitForm: React.FC<Props> = ({ onSubmit, onCancel, initialValues 
 
   const handleAcceptHours = () => {
     if (aiHours) setPlannedHours(aiHours.estimatedHours.toString());
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!title.trim()) return;
+    setDescLoading(true);
+    try {
+      const suggestion = await api.suggestCommit(title);
+      if (suggestion.suggestedDescription) setDescription(suggestion.suggestedDescription);
+      if (suggestion.suggestedPriority) setChessPriority(suggestion.suggestedPriority as ChessPriority);
+      if (suggestion.suggestedOutcomeId) {
+        setOutcomeId(suggestion.suggestedOutcomeId);
+        setSuggestedOutcomeId(suggestion.suggestedOutcomeId);
+      }
+      if (suggestion.estimatedHours) setPlannedHours(suggestion.estimatedHours.toString());
+    } catch { /* silently fail */ }
+    finally { setDescLoading(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,7 +202,18 @@ export const CommitForm: React.FC<Props> = ({ onSubmit, onCancel, initialValues 
       )}
 
       <div>
-        <label className="block text-xs font-bold text-secondary uppercase tracking-widest mb-2">Description</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-bold text-secondary uppercase tracking-widest">Description</label>
+          <button type="button" onClick={handleGenerateDescription} disabled={!title.trim() || descLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary-container/50 text-on-tertiary-container text-[10px] font-bold hover:bg-tertiary-container disabled:opacity-40 transition-all">
+            {descLoading ? (
+              <span className="material-symbols-outlined text-xs animate-spin">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-xs">auto_awesome</span>
+            )}
+            AI Fill All
+          </button>
+        </div>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)}
           className="w-full bg-surface-container-low border-0 rounded-[1rem] px-5 py-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
           rows={3} placeholder="Additional context..." />
