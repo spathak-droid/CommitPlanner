@@ -5,14 +5,14 @@ import { CommitComments } from '../components/CommitComments';
 import { FilterBar } from '../components/FilterBar';
 import { usePageTransition, useStaggerReveal, useMagneticButton } from '../hooks/useAnimations';
 import * as api from '../services/api';
-import type { ChessPriority, PlanStatus, ReviewInsight, WeeklyDigest } from '../types';
+import type { CalendarEntry, ChessPriority, PlanStatus, ReviewInsight, WeeklyDigest } from '../types';
 
 function getMonday(): string {
   const now = new Date();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(now.setDate(diff));
-  return monday.toISOString().split('T')[0]!;
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
 }
 
 const ManagerDashboardPage: React.FC = () => {
@@ -26,6 +26,7 @@ const ManagerDashboardPage: React.FC = () => {
   const [insightLoading, setInsightLoading] = useState(false);
   const [weeklyDigest, setWeeklyDigest] = useState<WeeklyDigest | null>(null);
   const [digestLoading, setDigestLoading] = useState(false);
+  const [individualHistory, setIndividualHistory] = useState<CalendarEntry[]>([]);
 
   // Filter state — initialised from URL params
   const [filterPriorities, setFilterPriorities] = useState<ChessPriority[]>(() => {
@@ -67,11 +68,36 @@ const ManagerDashboardPage: React.FC = () => {
     window.history.replaceState({}, '', params.toString() ? `?${params.toString()}` : window.location.pathname);
   }, [filterPriorities, filterStatuses, completionBelow]);
 
+  const [prevWeekPlans, setPrevWeekPlans] = useState<typeof teamPlans>([]);
+
   useEffect(() => { fetchTeamData(weekStart); }, [weekStart, fetchTeamData]);
 
+  // Fetch previous week's data for comparison
+  useEffect(() => {
+    const d = new Date(weekStart + 'T00:00:00');
+    d.setDate(d.getDate() - 7);
+    const prevWeek = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    api.fetchTeamPlans(prevWeek)
+      .then(setPrevWeekPlans)
+      .catch(() => setPrevWeekPlans([]));
+  }, [weekStart]);
+
   const handleDrillDown = async (planId: string) => {
-    try { setSelectedPlan(await api.fetchPlan(planId)); setSelectedPlanId(planId); }
-    catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
+    try {
+      const plan = await api.fetchPlan(planId);
+      setSelectedPlan(plan);
+      setSelectedPlanId(planId);
+      setReviewInsight(null);
+      // Fetch 8 weeks of history for this person
+      const now = new Date();
+      const from = new Date(now);
+      from.setDate(from.getDate() - 8 * 7);
+      const fromStr = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-${String(from.getDate()).padStart(2, '0')}`;
+      const toStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      api.fetchCalendar(fromStr, toStr)
+        .then(entries => setIndividualHistory(entries.filter(e => e.userId === plan.userId).sort((a, b) => a.weekStartDate.localeCompare(b.weekStartDate))))
+        .catch(() => setIndividualHistory([]));
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Failed', 'error'); }
   };
 
   const handleReview = async (status: 'APPROVED' | 'FLAGGED') => {
@@ -276,6 +302,101 @@ const ManagerDashboardPage: React.FC = () => {
           </div>
 
         </div>
+
+        {/* Individual Performance History */}
+        {individualHistory.length > 1 && (() => {
+          const history = individualHistory.filter(e => e.planId);
+          if (history.length < 2) return null;
+          const latest = history[history.length - 1]!;
+          const prev = history[history.length - 2]!;
+          const oldest = history[0]!;
+          const avgAll = Math.round(history.reduce((s, e) => s + e.avgCompletionPct, 0) / history.length);
+          const delta = Math.round(latest.avgCompletionPct - prev.avgCompletionPct);
+          const monthTrend = Math.round(latest.avgCompletionPct - oldest.avgCompletionPct);
+          const bestWeek = history.reduce((best, e) => e.avgCompletionPct > best.avgCompletionPct ? e : best, history[0]!);
+          const worstWeek = history.reduce((worst, e) => e.avgCompletionPct < worst.avgCompletionPct ? e : worst, history[0]!);
+          const consistency = Math.round(Math.sqrt(history.reduce((s, e) => s + Math.pow(e.avgCompletionPct - avgAll, 2), 0) / history.length));
+
+          const insights: { icon: string; text: string; color: string }[] = [];
+          if (delta > 5) insights.push({ icon: 'trending_up', text: `Completion up ${delta}% from last week (${Math.round(prev.avgCompletionPct)}% → ${Math.round(latest.avgCompletionPct)}%)`, color: 'text-green-600' });
+          else if (delta < -5) insights.push({ icon: 'trending_down', text: `Completion down ${Math.abs(delta)}% from last week (${Math.round(prev.avgCompletionPct)}% → ${Math.round(latest.avgCompletionPct)}%)`, color: 'text-error' });
+          else insights.push({ icon: 'trending_flat', text: `Completion steady at ${Math.round(latest.avgCompletionPct)}% (was ${Math.round(prev.avgCompletionPct)}% last week)`, color: 'text-secondary' });
+
+          if (monthTrend > 10) insights.push({ icon: 'rocket_launch', text: `Up ${monthTrend}% over ${history.length} weeks — strong growth trajectory`, color: 'text-green-600' });
+          else if (monthTrend < -10) insights.push({ icon: 'speed', text: `Down ${Math.abs(monthTrend)}% over ${history.length} weeks — sustained decline needs attention`, color: 'text-error' });
+
+          if (consistency > 15) insights.push({ icon: 'swap_vert', text: `High variability (±${consistency}%) — inconsistent week to week`, color: 'text-tertiary' });
+          else if (consistency < 8) insights.push({ icon: 'verified', text: `Very consistent performer (±${consistency}% variance)`, color: 'text-green-600' });
+
+          if (avgAll >= 80) insights.push({ icon: 'star', text: `${history.length}-week average of ${avgAll}% — top performer`, color: 'text-green-600' });
+          else if (avgAll < 55) insights.push({ icon: 'flag', text: `${history.length}-week average of ${avgAll}% — may need coaching or workload adjustment`, color: 'text-error' });
+
+          return (
+            <div className="rounded-[1.5rem] bg-surface-lowest p-6 shadow-[0px_24px_48px_rgba(27,27,30,0.04)] ring-1 ring-outline-variant/10 space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>timeline</span>
+                <h3 className="font-black text-on-surface text-lg">Performance History</h3>
+                <span className="text-xs text-secondary">Last {history.length} weeks</span>
+              </div>
+
+              {/* Sparkline-style bar chart */}
+              <div className="flex items-end gap-1.5 h-24">
+                {history.map((entry, i) => {
+                  const pct = Math.round(entry.avgCompletionPct);
+                  const isLatest = i === history.length - 1;
+                  const barColor = pct >= 80 ? 'bg-green-600' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-400';
+                  return (
+                    <div key={entry.weekStartDate} className="flex-1 flex flex-col items-center gap-1 group relative">
+                      <div className={`w-full rounded-t-md ${isLatest ? barColor : barColor + '/70'} transition-all ${isLatest ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                        style={{ height: `${Math.max(pct, 4)}%` }} />
+                      <span className={`text-[9px] font-bold ${isLatest ? 'text-primary' : 'text-secondary'}`}>
+                        {new Date(entry.weekStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      {/* Tooltip */}
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 hidden group-hover:block bg-on-surface text-white text-[10px] font-bold px-2 py-1 rounded-lg whitespace-nowrap z-10">
+                        {pct}% · {entry.commitCount} commits · {entry.status}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Summary stats */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="rounded-xl bg-surface-container-low p-3 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-secondary">Avg</p>
+                  <p className="text-xl font-black text-on-surface">{avgAll}%</p>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-secondary">Best</p>
+                  <p className="text-xl font-black text-green-600">{Math.round(bestWeek.avgCompletionPct)}%</p>
+                  <p className="text-[9px] text-secondary">{new Date(bestWeek.weekStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-secondary">Worst</p>
+                  <p className="text-xl font-black text-red-400">{Math.round(worstWeek.avgCompletionPct)}%</p>
+                  <p className="text-[9px] text-secondary">{new Date(worstWeek.weekStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                </div>
+                <div className="rounded-xl bg-surface-container-low p-3 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-secondary">Trend</p>
+                  <p className={`text-xl font-black ${monthTrend > 0 ? 'text-green-600' : monthTrend < 0 ? 'text-error' : 'text-secondary'}`}>
+                    {monthTrend > 0 ? '+' : ''}{monthTrend}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Written insights */}
+              <div className="space-y-2">
+                {insights.map((insight, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className={`material-symbols-outlined text-base mt-0.5 ${insight.color}`} style={{ fontVariationSettings: "'FILL' 1" }}>{insight.icon}</span>
+                    <p className="text-sm text-on-surface">{insight.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* AI Review Insight */}
         <div className="rounded-[1.25rem] bg-gradient-to-br from-tertiary-container/20 via-white to-primary-container/10 p-6 ring-1 ring-tertiary/10">
@@ -622,6 +743,134 @@ const ManagerDashboardPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Week-over-Week Performance Insights */}
+      {prevWeekPlans.length > 0 && (
+        <div className="bg-surface-lowest rounded-[1.5rem] p-8 shadow-[0px_24px_48px_rgba(27,27,30,0.04)] ring-1 ring-outline-variant/10 space-y-6">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-2xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-on-surface">Week-over-Week Insights</h2>
+              <p className="text-sm text-secondary">Comparing this week vs. last week performance</p>
+            </div>
+          </div>
+
+          {/* Team summary comparison */}
+          {(() => {
+            const thisAvg = teamPlans.length > 0 ? teamPlans.reduce((s, p) => s + (p.avgCompletionPct || 0), 0) / teamPlans.length : 0;
+            const prevAvg = prevWeekPlans.length > 0 ? prevWeekPlans.reduce((s, p) => s + (p.avgCompletionPct || 0), 0) / prevWeekPlans.length : 0;
+            const delta = Math.round(thisAvg - prevAvg);
+            const thisHours = teamPlans.reduce((s, p) => s + (p.totalPlannedHours || 0), 0);
+            const prevHours = prevWeekPlans.reduce((s, p) => s + (p.totalPlannedHours || 0), 0);
+            const thisCommits = teamPlans.reduce((s, p) => s + p.totalCommits, 0);
+            const prevCommits = prevWeekPlans.reduce((s, p) => s + p.totalCommits, 0);
+
+            return (
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-[1.25rem] bg-surface-container-low p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-secondary">Avg Completion</p>
+                  <p className="mt-2 text-3xl font-black text-on-surface">{Math.round(thisAvg)}%</p>
+                  <p className={`text-sm font-bold mt-1 ${delta > 0 ? 'text-green-600' : delta < 0 ? 'text-error' : 'text-secondary'}`}>
+                    {delta > 0 ? '+' : ''}{delta}% vs last week
+                  </p>
+                </div>
+                <div className="rounded-[1.25rem] bg-surface-container-low p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-secondary">Team Hours</p>
+                  <p className="mt-2 text-3xl font-black text-on-surface">{thisHours}h</p>
+                  <p className="text-sm font-bold mt-1 text-secondary">{prevHours}h last week</p>
+                </div>
+                <div className="rounded-[1.25rem] bg-surface-container-low p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-secondary">Total Commits</p>
+                  <p className="mt-2 text-3xl font-black text-on-surface">{thisCommits}</p>
+                  <p className="text-sm font-bold mt-1 text-secondary">{prevCommits} last week</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Individual performance cards */}
+          <div className="space-y-3">
+            {teamPlans.map((tp) => {
+              const prev = prevWeekPlans.find(p => p.userId === tp.userId);
+              const thisComp = Math.round(tp.avgCompletionPct || 0);
+              const prevComp = prev ? Math.round(prev.avgCompletionPct || 0) : 0;
+              const delta = thisComp - prevComp;
+              const thisActual = tp.totalActualHours ?? 0;
+              const thisPlanned = tp.totalPlannedHours ?? 0;
+              const hoursAccuracy = thisPlanned > 0 ? Math.round((thisActual / thisPlanned) * 100) : 0;
+
+              const trend = delta > 5 ? 'improving' : delta < -5 ? 'declining' : 'steady';
+              const trendIcon = trend === 'improving' ? 'trending_up' : trend === 'declining' ? 'trending_down' : 'trending_flat';
+              const trendColor = trend === 'improving' ? 'text-green-600' : trend === 'declining' ? 'text-error' : 'text-secondary';
+              const trendBg = trend === 'improving' ? 'bg-green-50' : trend === 'declining' ? 'bg-error-container/30' : 'bg-surface-container-low';
+
+              // Generate insight text
+              const insights: string[] = [];
+              if (trend === 'improving') insights.push(`Up ${delta}% from last week — strong momentum.`);
+              if (trend === 'declining') insights.push(`Down ${Math.abs(delta)}% from last week — may need support.`);
+              if (hoursAccuracy > 120) insights.push(`Spent ${hoursAccuracy}% of planned hours — consistently underestimating.`);
+              if (hoursAccuracy > 0 && hoursAccuracy < 80) insights.push(`Only used ${hoursAccuracy}% of planned hours — may be over-scoping.`);
+              if (thisComp >= 85) insights.push('Top performer this week.');
+              if (thisComp < 50 && thisComp > 0) insights.push('Below 50% — discuss blockers in next 1:1.');
+              if (tp.reviewStatus === 'FLAGGED') insights.push('Plan was flagged — follow up on feedback.');
+
+              return (
+                <div key={tp.userId} className={`rounded-[1.25rem] ${trendBg} p-5`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">
+                        <span className="text-xs font-bold text-on-primary-container">{tp.fullName.split(' ').map(n => n[0]).join('')}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-on-surface">{tp.fullName}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className={`material-symbols-outlined text-base ${trendColor}`}>{trendIcon}</span>
+                          <span className={`text-xs font-bold ${trendColor}`}>
+                            {trend === 'improving' ? 'Improving' : trend === 'declining' ? 'Declining' : 'Steady'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-black text-on-surface">{thisComp}%</p>
+                      <p className={`text-xs font-bold ${delta > 0 ? 'text-green-600' : delta < 0 ? 'text-error' : 'text-secondary'}`}>
+                        {prev ? `${delta > 0 ? '+' : ''}${delta}% vs ${prevComp}%` : 'No prior week'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress comparison bar */}
+                  <div className="relative h-3 rounded-full bg-surface-container overflow-hidden mb-3">
+                    {prev && (
+                      <div className="absolute h-full bg-outline-variant/30 rounded-full" style={{ width: `${Math.min(prevComp, 100)}%` }} />
+                    )}
+                    <div className={`absolute h-full rounded-full ${thisComp >= 80 ? 'bg-green-600' : thisComp >= 50 ? 'bg-yellow-500' : 'bg-red-400'}`} style={{ width: `${Math.min(thisComp, 100)}%` }} />
+                  </div>
+
+                  {/* Metrics row */}
+                  <div className="flex gap-4 mb-2 text-xs">
+                    <span className="text-secondary"><strong className="text-on-surface">{tp.totalCommits}</strong> commits</span>
+                    <span className="text-secondary"><strong className="text-on-surface">{tp.totalPlannedHours}h</strong> planned</span>
+                    {thisActual > 0 && <span className="text-secondary"><strong className="text-on-surface">{thisActual}h</strong> actual</span>}
+                  </div>
+
+                  {/* Insights */}
+                  {insights.length > 0 && (
+                    <div className="space-y-1">
+                      {insights.map((insight, i) => (
+                        <p key={i} className="text-xs text-secondary flex items-start gap-1.5">
+                          <span className="material-symbols-outlined text-xs mt-0.5 text-tertiary">arrow_right</span>
+                          {insight}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Sync Prep — data-driven insights */}
       {(() => {

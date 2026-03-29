@@ -7,10 +7,14 @@ import { usePageTransition } from '../hooks/useAnimations';
 import * as api from '../services/api';
 import type { VelocityPoint, CompletionPoint, HoursAccuracyPoint, CarryForwardPoint, CoverageTrendPoint } from '../types';
 
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function weeksAgo(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() - n * 7);
-  return d.toISOString().split('T')[0]!;
+  return localDateStr(d);
 }
 
 function formatWeek(dateStr: string): string {
@@ -30,7 +34,7 @@ const COLORS = {
 
 const AnalyticsPage: React.FC = () => {
   const [from, setFrom] = useState(weeksAgo(12));
-  const [to, setTo] = useState(new Date().toISOString().split('T')[0]!);
+  const [to, setTo] = useState(localDateStr(new Date()));
   const [velocity, setVelocity] = useState<VelocityPoint[]>([]);
   const [completion, setCompletion] = useState<CompletionPoint[]>([]);
   const [hours, setHours] = useState<HoursAccuracyPoint[]>([]);

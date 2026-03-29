@@ -10,6 +10,7 @@ import com.weeklycommit.entity.AiInteraction;
 import com.weeklycommit.entity.WeeklyPlan;
 import com.weeklycommit.exception.AiUnavailableException;
 import com.weeklycommit.repository.AiInteractionRepository;
+import com.weeklycommit.repository.AppUserRepository;
 import com.weeklycommit.repository.WeeklyPlanRepository;
 import jakarta.annotation.PostConstruct;
 import okhttp3.*;
@@ -31,6 +32,7 @@ public class AiService {
     private final RcdoService rcdoService;
     private final WeeklyPlanRepository planRepo;
     private final AiInteractionRepository interactionRepo;
+    private final AppUserRepository userRepo;
     private final AiCacheService cacheService;
     private final AuthorizationService authService;
     private final ObjectMapper objectMapper;
@@ -42,6 +44,7 @@ public class AiService {
             RcdoService rcdoService,
             WeeklyPlanRepository planRepo,
             AiInteractionRepository interactionRepo,
+            AppUserRepository userRepo,
             AiCacheService cacheService,
             AuthorizationService authService,
             ObjectMapper objectMapper
@@ -50,6 +53,7 @@ public class AiService {
         this.rcdoService = rcdoService;
         this.planRepo = planRepo;
         this.interactionRepo = interactionRepo;
+        this.userRepo = userRepo;
         this.cacheService = cacheService;
         this.authService = authService;
         this.objectMapper = objectMapper;
@@ -437,8 +441,15 @@ public class AiService {
         double totalPlanned = 0;
         double totalActual = 0;
 
+        // Build userId -> fullName map
+        Map<String, String> nameMap = new HashMap<>();
         for (var plan : allPlans) {
-            teamSummary.append("User: ").append(plan.getUserId())
+            nameMap.computeIfAbsent(plan.getUserId(), uid ->
+                    userRepo.findById(uid).map(u -> u.getFullName()).orElse(uid));
+        }
+
+        for (var plan : allPlans) {
+            teamSummary.append("Team member: ").append(nameMap.getOrDefault(plan.getUserId(), plan.getUserId()))
                     .append(" Status: ").append(plan.getStatus()).append("\n");
             for (var commit : plan.getCommits()) {
                 totalCommits++;
@@ -454,7 +465,7 @@ public class AiService {
 
         String prompt = """
                 You are an AI assistant generating a weekly team digest for a manager. Summarize the team's \
-                performance for the week.
+                performance for the week. Always refer to team members by their full name, never by user ID.
 
                 Team data for week of %s:
                 Total plans: %d

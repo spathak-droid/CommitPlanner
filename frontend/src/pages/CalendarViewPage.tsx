@@ -9,7 +9,10 @@ function mondayOfWeek(date: Date): string {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
-  return d.toISOString().split('T')[0]!;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function weeksAgo(n: number): string {
@@ -51,9 +54,9 @@ const STATUS_STYLE: Record<string, { dot: string; bg: string; text: string }> = 
 };
 
 function completionColor(pct: number): string {
-  if (pct >= 80) return 'bg-primary';
-  if (pct >= 50) return 'bg-primary/60';
-  if (pct > 0) return 'bg-primary/30';
+  if (pct >= 80) return 'bg-green-600';
+  if (pct >= 50) return 'bg-yellow-500';
+  if (pct > 0) return 'bg-red-400';
   return 'bg-surface-container';
 }
 
@@ -69,7 +72,7 @@ interface Props {
   onNavigateToPlan?: () => void;
 }
 
-const NUM_WEEKS = 13;
+const NUM_WEEKS = 9;
 
 const CalendarViewPage: React.FC<Props> = ({ onNavigateToPlan }) => {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
@@ -84,7 +87,8 @@ const CalendarViewPage: React.FC<Props> = ({ onNavigateToPlan }) => {
     let cancelled = false;
     setLoading(true);
     const from = weeksAgo(NUM_WEEKS - 1);
-    const to = new Date().toISOString().split('T')[0]!;
+    const now = new Date();
+    const to = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     api.fetchCalendar(from, to)
       .then((data) => { if (!cancelled) setEntries(data); })
       .catch(() => { if (!cancelled) setEntries([]); })
@@ -147,9 +151,9 @@ const CalendarViewPage: React.FC<Props> = ({ onNavigateToPlan }) => {
       <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">Completion</span>
       {[
         ['bg-surface-container-low/50', 'No plan'],
-        ['bg-primary/30', '<50%'],
-        ['bg-primary/60', '50-79%'],
-        ['bg-primary', '80%+'],
+        ['bg-red-400', '<50%'],
+        ['bg-yellow-500', '50-79%'],
+        ['bg-green-600', '80%+'],
       ].map(([color, label]) => (
         <div key={label} className="flex items-center gap-1.5">
           <span className={`w-3.5 h-3.5 rounded ${color}`} />
@@ -229,7 +233,7 @@ const CalendarViewPage: React.FC<Props> = ({ onNavigateToPlan }) => {
                       const hasPlan = !!entry?.planId;
                       const cellKey = `${user.id}|${weekDate}`;
                       return (
-                        <td key={weekDate} className="px-0.5 py-1.5" style={{ minWidth: 40, maxWidth: 56 }}>
+                        <td key={weekDate} className="px-1 py-2" style={{ minWidth: 48, maxWidth: 64 }}>
                           <div className="relative">
                             <button
                               onClick={() => handleCellClick(entry)}

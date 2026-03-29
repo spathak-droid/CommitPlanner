@@ -4,6 +4,7 @@ import faviconGreen from '../../public/assets/favicon-green.png';
 
 interface Props {
   onLogin: (userId: string, password: string) => Promise<void>;
+  onShowProblem?: () => void;
 }
 
 const roleContent: Record<UserRole, {
@@ -49,7 +50,7 @@ const roleContent: Record<UserRole, {
   },
 };
 
-export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
+export const LoginScreen: React.FC<Props> = ({ onLogin, onShowProblem }) => {
   const [role, setRole] = useState<UserRole>('MANAGER');
   const [userId, setUserId] = useState('manager-1');
   const [password, setPassword] = useState(roleContent.MANAGER.password);
@@ -267,15 +268,27 @@ export const LoginScreen: React.FC<Props> = ({ onLogin }) => {
                   <span className="material-symbols-outlined text-lg">{submitting ? 'hourglass_top' : 'login'}</span>
                   {submitting ? 'Signing In...' : `Enter as ${current.label}`}
                 </button>
-                <a
-                  href={`${((window as any).__API_URL__ || 'http://localhost:8080/api').replace(/\/api\/?$/, '')}/swagger-ui/index.html`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-outline-variant/20 bg-white/70 px-6 py-3 text-xs font-bold text-secondary transition-all hover:bg-white hover:text-on-surface"
-                >
-                  <span className="material-symbols-outlined text-base">api</span>
-                  API Docs (Swagger)
-                </a>
+                <div className="flex gap-3">
+                  {onShowProblem && (
+                    <button
+                      type="button"
+                      onClick={onShowProblem}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-full border border-outline-variant/20 bg-white/70 px-6 py-3 text-xs font-bold text-secondary transition-all hover:bg-white hover:text-on-surface"
+                    >
+                      <span className="material-symbols-outlined text-base">lightbulb</span>
+                      Problem Statement
+                    </button>
+                  )}
+                  <a
+                    href={`${((window as any).__API_URL__ || 'http://localhost:8080/api').replace(/\/api\/?$/, '')}/swagger-ui/index.html`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full border border-outline-variant/20 bg-white/70 px-6 py-3 text-xs font-bold text-secondary transition-all hover:bg-white hover:text-on-surface"
+                  >
+                    <span className="material-symbols-outlined text-base">api</span>
+                    API Docs (Swagger)
+                  </a>
+                </div>
               </div>
             </form>
           </div>

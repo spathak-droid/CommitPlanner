@@ -16,6 +16,7 @@ import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import CapacityPlanningPage from './pages/CapacityPlanningPage';
 import CalendarViewPage from './pages/CalendarViewPage';
+import ProblemStatementPage from './pages/ProblemStatementPage';
 import type { AppProps, UserRole } from './types';
 
 const roleViews: Record<UserRole, View[]> = {
@@ -32,7 +33,6 @@ const App: React.FC<AppProps> = ({ userId, role, apiBaseUrl, authToken }) => {
     login,
     logout,
     isAuthenticated,
-    userId: storeUserId,
     fullName,
     role: storeRole,
     token,
@@ -41,6 +41,7 @@ const App: React.FC<AppProps> = ({ userId, role, apiBaseUrl, authToken }) => {
   } = useStore();
   const [activeView, setActiveView] = useState<View>(getDefaultView(storeRole));
   const [bootstrapping, setBootstrapping] = useState(Boolean(authToken));
+  const [showProblem, setShowProblem] = useState(false);
 
   useEffect(() => {
     if (apiBaseUrl) setBaseUrl(apiBaseUrl);
@@ -130,10 +131,27 @@ const App: React.FC<AppProps> = ({ userId, role, apiBaseUrl, authToken }) => {
   }
 
   if (!isAuthenticated) {
+    if (showProblem) {
+      return (
+        <div className="min-h-screen bg-surface p-8">
+          <Toast />
+          <div className="max-w-6xl mx-auto">
+            <button
+              onClick={() => setShowProblem(false)}
+              className="mb-6 inline-flex items-center gap-2 rounded-full bg-surface-container-low px-5 py-2.5 text-sm font-bold text-secondary hover:text-on-surface transition-all"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              Back to Login
+            </button>
+            <ProblemStatementPage />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen">
         <Toast />
-        <LoginScreen onLogin={handleLogin} />
+        <LoginScreen onLogin={handleLogin} onShowProblem={() => setShowProblem(true)} />
       </div>
     );
   }
@@ -142,7 +160,7 @@ const App: React.FC<AppProps> = ({ userId, role, apiBaseUrl, authToken }) => {
     <ErrorBoundary>
       <div className="min-h-screen bg-surface">
         <Toast />
-        <TopNav activeView={activeView} onViewChange={handleViewChange} userId={storeUserId} role={storeRole} fullName={fullName} />
+        <TopNav role={storeRole} fullName={fullName} />
         <Sidebar activeView={activeView} onViewChange={handleViewChange} role={storeRole} onLogout={handleLogout} onPrimaryAction={handleContributorPrimaryAction} />
 
         <main className="md:ml-72 pt-24 px-8 pb-12 transition-all duration-300">

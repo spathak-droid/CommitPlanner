@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Problem Statement — Weekly Commit System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f1117;
+    color: #e1e4e8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #fff;
+    text-align: center;
+  }
+  .subtitle {
+    font-size: 1.05rem;
+    color: #8b949e;
+    margin-bottom: 48px;
+    text-align: center;
+    max-width: 700px;
+    line-height: 1.5;
+  }
+
+  .diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    max-width: 1100px;
+    width: 100%;
+  }
+
+  /* ---- BEFORE (left) ---- */
+  .side {
+    flex: 1;
+    border-radius: 16px;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+  }
+  .before {
+    background: #1c1e26;
+    border: 2px solid #e5534b;
+    margin-right: -1px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .after {
+    background: #1c1e26;
+    border: 2px solid #3fb950;
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .side-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .before .side-label { color: #e5534b; }
+  .after .side-label { color: #3fb950; }
+
+  .side-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #fff;
+  }
+
+  /* ---- Arrow divider ---- */
+  .arrow-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    flex-shrink: 0;
+    z-index: 2;
+  }
+  .arrow-divider svg { filter: drop-shadow(0 0 8px rgba(99,179,237,.4)); }
+
+  /* ---- Nodes ---- */
+  .org-goals {
+    background: #21262d;
+    border: 1px dashed #484f58;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    opacity: .45;
+    position: relative;
+  }
+  .org-goals .tag {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #e5534b;
+    margin-bottom: 6px;
+  }
+  .org-goals .items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .org-goals .item {
+    font-size: .82rem;
+    color: #8b949e;
+    padding-left: 12px;
+    border-left: 2px solid #484f58;
+  }
+  .org-goals::after {
+    content: '✕ NOT CONNECTED';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    font-size: .75rem;
+    font-weight: 800;
+    color: #e5534b;
+    letter-spacing: 2px;
+    background: rgba(229,83,75,.12);
+    padding: 4px 14px;
+    border-radius: 4px;
+    border: 1px solid #e5534b;
+  }
+
+  .commits-box {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px 18px;
+    flex: 1;
+  }
+  .commits-box .tag {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #8b949e;
+    margin-bottom: 10px;
+  }
+
+  .commit-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #161b22;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: .85rem;
+  }
+  .commit-item:last-child { margin-bottom: 0; }
+  .commit-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .before .commit-dot { background: #e5534b; }
+
+  .no-priority {
+    font-size: .65rem;
+    color: #6e7681;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .pain-points {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pain {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: .8rem;
+    color: #f0883e;
+    line-height: 1.35;
+  }
+  .pain-icon { flex-shrink: 0; margin-top: 1px; }
+
+  /* ---- AFTER (right) ---- */
+  .rcdo-tree {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .rcdo-tree .tag {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #3fb950;
+    margin-bottom: 10px;
+  }
+
+  .tree-level {
+    padding-left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tree-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .82rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+  }
+  .rc { color: #f78166; font-weight: 600; }
+  .do { color: #d2a8ff; padding-left: 18px; }
+  .oc { color: #79c0ff; padding-left: 36px; }
+  .tree-icon { font-size: .7rem; flex-shrink: 0; }
+
+  .linked-commits {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px 18px;
+    flex: 1;
+  }
+  .linked-commits .tag {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #3fb950;
+    margin-bottom: 10px;
+  }
+
+  .linked-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #161b22;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: .85rem;
+  }
+  .linked-item:last-child { margin-bottom: 0; }
+
+  .chess-badge {
+    font-size: .6rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+  .chess-a { background: rgba(229,83,75,.15); color: #e5534b; border: 1px solid #e5534b; }
+  .chess-b { background: rgba(210,168,255,.12); color: #d2a8ff; border: 1px solid #d2a8ff; }
+  .chess-c { background: rgba(63,185,80,.12); color: #3fb950; border: 1px solid #3fb950; }
+
+  .outcome-link {
+    font-size: .6rem;
+    color: #79c0ff;
+    margin-left: auto;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .outcome-link svg { flex-shrink: 0; }
+
+  .benefits {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .benefit {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: .8rem;
+    color: #3fb950;
+    line-height: 1.35;
+  }
+  .benefit-icon { flex-shrink: 0; margin-top: 1px; }
+
+  /* ---- Lifecycle bar ---- */
+  .lifecycle {
+    margin-top: 40px;
+    max-width: 1100px;
+    width: 100%;
+    background: #1c1e26;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px 32px;
+  }
+  .lifecycle-label {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8b949e;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .lifecycle-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .lf-step {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .lf-draft { background: rgba(139,148,158,.12); color: #8b949e; border: 1px solid #484f58; }
+  .lf-locked { background: rgba(210,168,255,.1); color: #d2a8ff; border: 1px solid #6e40c9; }
+  .lf-recon { background: rgba(247,129,102,.1); color: #f78166; border: 1px solid #f78166; }
+  .lf-done { background: rgba(63,185,80,.1); color: #3fb950; border: 1px solid #3fb950; }
+  .lf-carry { background: rgba(121,192,255,.1); color: #79c0ff; border: 1px solid #79c0ff; }
+  .lf-arrow {
+    color: #484f58;
+    font-size: 1.2rem;
+    padding: 0 8px;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>Why Replace 15-Five?</h1>
+<p class="subtitle">
+  Individual weekly commitments have no structural link to organizational strategy.
+  Managers can't see misalignment until it's too late.
+</p>
+
+<div class="diagram">
+  <!-- BEFORE -->
+  <div class="side before">
+    <div class="side-label">Before — 15-Five</div>
+    <div class="side-title">Isolated Planning</div>
+
+    <div class="org-goals">
+      <div class="tag">Organizational Goals</div>
+      <div class="items">
+        <div class="item">Rally Cry: Grow Enterprise ARR</div>
+        <div class="item">Objective: Reduce onboarding time</div>
+        <div class="item">Outcome: 50% faster first-value</div>
+      </div>
+    </div>
+
+    <div class="commits-box">
+      <div class="tag">Weekly Commitments</div>
+      <div class="commit-item">
+        <span class="commit-dot"></span>
+        Refactor auth module
+        <span class="no-priority">no priority</span>
+      </div>
+      <div class="commit-item">
+        <span class="commit-dot"></span>
+        Update API docs
+        <span class="no-priority">no priority</span>
+      </div>
+      <div class="commit-item">
+        <span class="commit-dot"></span>
+        Fix staging bugs
+        <span class="no-priority">no priority</span>
+      </div>
+      <div class="commit-item">
+        <span class="commit-dot"></span>
+        Team sync prep
+        <span class="no-priority">no priority</span>
+      </div>
+    </div>
+
+    <div class="pain-points">
+      <div class="pain">
+        <span class="pain-icon">&#9888;</span>
+        No link between work and strategy
+      </div>
+      <div class="pain">
+        <span class="pain-icon">&#9888;</span>
+        No prioritization framework
+      </div>
+      <div class="pain">
+        <span class="pain-icon">&#9888;</span>
+        No reconciliation — planned vs. actual invisible
+      </div>
+      <div class="pain">
+        <span class="pain-icon">&#9888;</span>
+        Managers see misalignment too late
+      </div>
+    </div>
+  </div>
+
+  <!-- ARROW -->
+  <div class="arrow-divider">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <path d="M8 20H32M32 20L24 12M32 20L24 28" stroke="#58a6ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <!-- AFTER -->
+  <div class="side after">
+    <div class="side-label">After — Weekly Commit System</div>
+    <div class="side-title">Strategy-Linked Planning</div>
+
+    <div class="rcdo-tree">
+      <div class="tag">RCDO Hierarchy</div>
+      <div class="tree-level">
+        <div class="tree-node rc"><span class="tree-icon">&#9733;</span> Rally Cry: Grow Enterprise ARR</div>
+        <div class="tree-node do"><span class="tree-icon">&#9654;</span> Reduce onboarding time</div>
+        <div class="tree-node oc"><span class="tree-icon">&#9679;</span> 50% faster first-value</div>
+        <div class="tree-node do"><span class="tree-icon">&#9654;</span> Improve self-serve activation</div>
+        <div class="tree-node oc"><span class="tree-icon">&#9679;</span> 30% trial-to-paid conversion</div>
+      </div>
+    </div>
+
+    <div class="linked-commits">
+      <div class="tag">Linked Commitments</div>
+      <div class="linked-item">
+        <span class="chess-badge chess-a">A</span>
+        Refactor auth module
+        <span class="outcome-link">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9L9 3M9 3H4M9 3V8" stroke="#79c0ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          faster first-value
+        </span>
+      </div>
+      <div class="linked-item">
+        <span class="chess-badge chess-a">A</span>
+        Fix staging bugs
+        <span class="outcome-link">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9L9 3M9 3H4M9 3V8" stroke="#79c0ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          trial-to-paid
+        </span>
+      </div>
+      <div class="linked-item">
+        <span class="chess-badge chess-b">B</span>
+        Update API docs
+        <span class="outcome-link">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9L9 3M9 3H4M9 3V8" stroke="#79c0ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          faster first-value
+        </span>
+      </div>
+      <div class="linked-item">
+        <span class="chess-badge chess-c">C</span>
+        Team sync prep
+        <span class="outcome-link">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 9L9 3M9 3H4M9 3V8" stroke="#79c0ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          trial-to-paid
+        </span>
+      </div>
+    </div>
+
+    <div class="benefits">
+      <div class="benefit">
+        <span class="benefit-icon">&#10003;</span>
+        Every commit links to an organizational outcome
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">&#10003;</span>
+        Chess layer enforces A / B / C prioritization
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">&#10003;</span>
+        Reconciliation tracks planned vs. actual
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">&#10003;</span>
+        Managers see alignment gaps in real-time
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIFECYCLE -->
+<div class="lifecycle">
+  <div class="lifecycle-label">Enforced Weekly Lifecycle</div>
+  <div class="lifecycle-flow">
+    <div class="lf-step lf-draft">DRAFT</div>
+    <span class="lf-arrow">&#8594;</span>
+    <div class="lf-step lf-locked">LOCKED</div>
+    <span class="lf-arrow">&#8594;</span>
+    <div class="lf-step lf-recon">RECONCILING</div>
+    <span class="lf-arrow">&#8594;</span>
+    <div class="lf-step lf-done">RECONCILED</div>
+    <span class="lf-arrow">&#8594;</span>
+    <div class="lf-step lf-carry">CARRY FORWARD</div>
+  </div>
+</div>
+
+</body>
+</html>
