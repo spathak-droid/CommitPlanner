@@ -2,6 +2,29 @@
 
 > A micro-frontend module replacing 15-Five with RCDO-linked weekly planning. Enforces structural connection between individual weekly commitments and organizational Rally Cries, Defining Objectives, and Outcomes.
 
+### Live Demo
+
+| | URL |
+|--|-----|
+| App | [frontend-production-a2d0.up.railway.app](https://frontend-production-a2d0.up.railway.app) |
+| API | [backend-production-8df5.up.railway.app](https://backend-production-8df5.up.railway.app) |
+| Swagger | [backend-production-8df5.up.railway.app/swagger-ui/index.html](https://backend-production-8df5.up.railway.app/swagger-ui/index.html) |
+
+> Login: `manager-1` / `password123` (Manager) or `user-1` / `password123` (IC)
+
+---
+
+## Screenshots
+
+### Manager — Team Dashboard with Week-over-Week Insights
+![Manager Dashboard](docs/screenshots/manager-dashboard.png)
+
+### Analytics — Velocity, Completion, Carry-Forward, RCDO Coverage
+![Analytics](docs/screenshots/analytics.png)
+
+### IC — Reconciliation View (Planned vs. Actual)
+![Reconciliation](docs/screenshots/reconciliation.png)
+
 ---
 
 ## The Problem
