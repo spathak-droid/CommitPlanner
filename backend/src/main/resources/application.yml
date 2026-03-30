@@ -1,15 +1,4 @@
 spring:
-  mail:
-    host: ${SMTP_HOST:}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USER:}
-    password: ${SMTP_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/weekly_commits}
     username: ${DATABASE_USERNAME:app}
@@ -28,6 +17,10 @@ spring:
 
 server:
   port: 8080
+
+resend:
+  api-key: ${RESEND_API_KEY:}
+  from-email: ${RESEND_EMAIL:}
 
 anthropic:
   api-key: ${ANTHROPIC_API_KEY:}

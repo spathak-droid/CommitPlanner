@@ -1,30 +1,33 @@
 package com.weeklycommit.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final String RESEND_API_URL = "https://api.resend.com/emails";
+    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+    private final OkHttpClient httpClient = new OkHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${spring.mail.host:}")
-    private String host;
+    @Value("${resend.api-key:}")
+    private String apiKey;
 
-    @Value("${spring.mail.username:}")
-    private String fromAddress;
+    @Value("${resend.from-email:}")
+    private String fromEmail;
 
     private boolean isEnabled() {
-        return mailSender != null && host != null && !host.isBlank();
+        return apiKey != null && !apiKey.isBlank();
     }
 
     @Async
@@ -33,14 +36,29 @@ public class EmailService {
             return;
         }
         try {
-            var message = mailSender.createMimeMessage();
-            var helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromAddress);
-            helper.setTo(to);
-            helper.setSubject("[Weekly Commit] " + subject);
-            helper.setText(buildHtml(subject, body), true);
-            mailSender.send(message);
-            log.info("Sent notification email to {}: {}", to, subject);
+            var payload = Map.of(
+                "from", fromEmail,
+                "to", new String[]{to},
+                "subject", "[Weekly Commit] " + subject,
+                "html", buildHtml(subject, body)
+            );
+
+            var requestBody = RequestBody.create(objectMapper.writeValueAsString(payload), JSON);
+            var request = new Request.Builder()
+                .url(RESEND_API_URL)
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .post(requestBody)
+                .build();
+
+            try (var response = httpClient.newCall(request).execute()) {
+                if (response.isSuccessful()) {
+                    log.info("Sent email via Resend to {}: {}", to, subject);
+                } else {
+                    log.warn("Resend API error for {}: {} {}", to, response.code(),
+                        response.body() != null ? response.body().string() : "");
+                }
+            }
         } catch (Exception e) {
             log.warn("Failed to send email to {}: {}", to, e.getMessage());
         }
