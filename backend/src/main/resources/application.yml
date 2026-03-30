@@ -20,7 +20,7 @@ server:
 
 resend:
   api-key: ${RESEND_API_KEY:}
-  from-email: ${RESEND_EMAIL:}
+  from-email: ${RESEND_EMAIL:Weekly Commit <onboarding@resend.dev>}
 
 anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
