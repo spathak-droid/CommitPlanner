@@ -35,12 +35,24 @@ public class EmailService {
         if (!isEnabled() || to == null || to.isBlank()) {
             return;
         }
+        sendEmail(to, "[Weekly Commit] " + subject, buildHtml(subject, body));
+    }
+
+    @Async
+    public void sendRawHtmlEmail(String to, String subject, String html) {
+        if (!isEnabled() || to == null || to.isBlank()) {
+            return;
+        }
+        sendEmail(to, "[Weekly Commit] " + subject, html);
+    }
+
+    private void sendEmail(String to, String subject, String html) {
         try {
             var payload = Map.of(
                 "from", fromEmail,
                 "to", new String[]{to},
-                "subject", "[Weekly Commit] " + subject,
-                "html", buildHtml(subject, body)
+                "subject", subject,
+                "html", html
             );
 
             var requestBody = RequestBody.create(objectMapper.writeValueAsString(payload), JSON);
@@ -65,14 +77,17 @@ public class EmailService {
     }
 
     private String buildHtml(String subject, String body) {
-        return """
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-                <div style="background: #f5f3f7; border-radius: 16px; padding: 24px;">
-                    <h2 style="color: #1b1b1e; margin: 0 0 12px;">%s</h2>
-                    <p style="color: #5f5e5e; margin: 0; line-height: 1.6;">%s</p>
-                </div>
-                <p style="color: #9e9e9e; font-size: 12px; margin-top: 16px; text-align: center;">Weekly Commit System</p>
-            </div>
-            """.formatted(subject, body);
+        return "<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;\">"
+            + "<div style=\"background: #f5f3f7; border-radius: 16px; padding: 24px;\">"
+            + "<h2 style=\"color: #1b1b1e; margin: 0 0 12px;\">" + escapeHtml(subject) + "</h2>"
+            + "<p style=\"color: #5f5e5e; margin: 0; line-height: 1.6;\">" + escapeHtml(body) + "</p>"
+            + "</div>"
+            + "<p style=\"color: #9e9e9e; font-size: 12px; margin-top: 16px; text-align: center;\">Weekly Commit System</p>"
+            + "</div>";
+    }
+
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 }

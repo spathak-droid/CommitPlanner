@@ -2,6 +2,7 @@ package com.weeklycommit.controller;
 
 import com.weeklycommit.dto.*;
 import com.weeklycommit.service.AdminService;
+import com.weeklycommit.service.DailyDigestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,9 +18,19 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final DailyDigestService dailyDigestService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, DailyDigestService dailyDigestService) {
         this.adminService = adminService;
+        this.dailyDigestService = dailyDigestService;
+    }
+
+    @Operation(summary = "Manually trigger the daily digest emails")
+    @PostMapping("/trigger-digest")
+    @ResponseStatus(HttpStatus.OK)
+    public String triggerDigest() {
+        dailyDigestService.sendDailyDigests();
+        return "Digest triggered";
     }
 
     @Operation(summary = "List all users")

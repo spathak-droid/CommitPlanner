@@ -127,7 +127,7 @@ public class DailyDigestService {
             digestHtml = buildFallbackDigestHtml(manager.getFullName(), memberAnalyses, monday);
         }
 
-        emailService.sendNotificationEmail(
+        emailService.sendRawHtmlEmail(
                 manager.getEmail(),
                 "Daily Team Digest — " + dayOfWeek.charAt(0) + dayOfWeek.substring(1).toLowerCase(),
                 digestHtml
